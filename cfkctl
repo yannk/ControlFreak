@@ -9,10 +9,11 @@ my %options;
 
 GetOptions(
     'y|yes'      => \$options{yes},
+    'address=s'  => \$options{address},
+
     'h|help'     => \$options{help},
     'm|man'      => \$options{man},
-    'address=s'  => \$options{address},
-) or  pod2usage(2);
+) or pod2usage(2);
 
 pod2usage(1)             if $options{help};
 pod2usage(-verbose => 2) if $options{man};
