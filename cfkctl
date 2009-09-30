@@ -31,11 +31,11 @@ cfkctl - control ControlFreak!
 cfkctl [options] command [svcref ...]
 
  Options:
-    --yes|y           run non-interactively without asking for confirmations
-    --help|h          help
-    --man|m           more help
-    --address         unix or tcp socket to connect to ControlFreak
-                      [defaults to 127.0.0.1:11311]
+    -y, --yes           run non-interactively without asking for confirmations
+    -h, --help          help
+    -m, --man           more help
+    --address=SOCK      unix or tcp socket to connect to ControlFreak
+                        [defaults to 127.0.0.1:11311]
 
  Commands:
     up                make sure service is up
