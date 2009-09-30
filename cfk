@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use Find::Lib './lib';
+use Getopt::Long;
+use Log::Log4perl qw/:easy/;
+Log::Log4perl->easy_init($DEBUG);
+
+use ControlFreak;
+use Carp;
+use Pod::Usage;
+
+my %options;
+GetOptions(
+    "c|config=s" => \$options{config},
+    "d|daemon"   => \$options{daemon},
+
+    'h|help'     => \$options{help},
+    'm|man'      => \$options{man},
+);
+
+pod2usage(1)             if $options{help};
+pod2usage(-verbose => 2) if $options{man};
+
+pod2usage("please provide a config file") unless $options{config};
+
+croak "Config file doesn't exist" unless -e $options{config};
+croak "Can't read config file"    unless -r $options{config};
+open my $cfg, "<", $options{config} or croak "Error reading config: $!";
+my $init_config = do { local $/; <$cfg> };
+
+=cut
+my $cf = ControlFreak->new;
+$cf->process_string($init_config);
+$cf->run;
+=cut
+
+__END__
+
+=head1 NAME
+
+cfk - the supervisor process for ControlFreak
+
+=head1 SYNOPSIS
+
+cfk [options]
+
+Options:
+
+ -c, --config=<file>  Path to a configuration file to use
+
+ -d, --daemon         Run as a daemon
+ -h, --help           Help
+ -m, --man            More help
+
+=head1 OPTIONS
+
+Please see L<SYNOPSIS>.
+
+=head1 DESCRIPTION
+
+B<cfk> supervises other processes, making sure there are up or down
+when you want to, and provides flexible logging facility for those
+services.
