@@ -1,0 +1,83 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+my %options;
+
+GetOptions(
+    'y|yes'      => \$options{yes},
+    'h|help'     => \$options{help},
+    'm|man'      => \$options{man},
+    'address=s'  => \$options{address},
+) or  pod2usage(2);
+
+pod2usage(1)             if $options{help};
+pod2usage(-verbose => 2) if $options{man};
+
+my $command = shift;
+my @svcrefs = @ARGV;
+
+__END__
+
+=head1 NAME
+
+cfkctl - control ControlFreak!
+
+=head1 SYNOPSIS
+
+cfkctl [options] command [svcref ...]
+
+ Options:
+    --yes|y           run non-interactively without asking for confirmations
+    --help|h          help
+    --man|m           more help
+    --address         unix or tcp socket to connect to ControlFreak
+                      [defaults to 127.0.0.1:11311]
+
+ Commands:
+    up                make sure service is up
+    down              make sure service is down
+    restart           if service is up, restart it
+    destroy           down a service and deletes it
+    list              list all services
+    status            print statuses of services
+
+ Services references:
+    all               All known services [default]
+    svcname           A string of the name of the service
+    @tag              All services tagged with the tag C<tag>
+    :status           All services of status C<status>
+
+  List of statuses:
+    up
+    down
+    failed   included in C<down>
+    backoff  included in C<down>
+    stopped  included in C<down>
+
+
+=head1 OPTIONS
+
+Please see L<SYNOPSIS>.
+
+=head1 DESCRIPTION
+
+B<cfkctl> is B<ControlFreak> command line interface, it connects to
+the management port and issues commands to it.
+
+=head1 EXAMPLES
+
+    ## stop everything that is not already stopped
+    cfkctl down all
+
+    ## make sure all webs are up (FastCGI processes for instance)
+    cfkctl up @webs
+
+    ## start yuidd once but don't attempt to resuscitate if failed
+    cfkctl once yuidd
+
+    ## remove a service reference completely
+    cfkctl destroy syncer
