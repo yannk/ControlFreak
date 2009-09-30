@@ -31,8 +31,8 @@ open my $cfg, "<", $options{config} or croak "Error reading config: $!";
 my $init_config = do { local $/; <$cfg> };
 
 =cut
-my $cf = ControlFreak->new;
-$cf->process_string($init_config);
+my $cf = ControlFreak->new( config => $cfg );
+$cf->init_config;
 $cf->run;
 =cut
 
@@ -63,3 +63,38 @@ Please see L<SYNOPSIS>.
 B<cfk> supervises other processes, making sure there are up or down
 when you want to, and provides flexible logging facility for those
 services.
+
+=head1 SAMPLE CONFIG
+
+  # management port
+  console address 127.0.0.1:113311
+  console full = on # enable this only if you know what you are doing
+
+  logger config = /etc/cfk/logger.conf
+
+  service memcached cmd = "/usr/bin/memcached -p 11211"
+  service memcached ignore_stderr = 1
+  service memcached tags = prod
+  service memcached-test cmd = "/usr/bin/memcached -p 12221"
+  service memcached tags = test,optional
+  service perlbal cmd = "/usr/bin/perlbal -c /etc/perlbal.conf"
+  service perlbal tags = prod
+
+  socket fcgisock address = "127.0.0.1:8080"
+  socket fcgisock options = TBD
+
+  ## webNNN share a common socket through their stdin
+  service web001 cmd = "/usr/bin/plackup -a /home/www/app.psgi -s FCGI"
+  service web001 stdin = fcgisock
+  service web001 tags = prod,webs
+
+  service web002 cmd = "/usr/bin/plackup -a /home/www/app.psgi -s FCGI"
+  service web002 stdin = fcgisock
+  service web002 tags = prod,webs
+
+  # start random stuff
+  command up svc memcached
+  command up svc perlbal
+  command down tag optional
+
+  load /etc/cfk.d/*.conf
