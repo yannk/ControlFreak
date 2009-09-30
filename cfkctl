@@ -78,7 +78,7 @@ the management port and issues commands to it.
     cfkctl up @webs
 
     ## start yuidd once but don't attempt to resuscitate if failed
-    cfkctl once yuidd
+    cfkctl once yuidd # Implementation??
 
     ## remove a service reference completely
     cfkctl destroy syncer
