@@ -8,7 +8,7 @@ use Object::Tiny qw{
 
     state
     child_cv
-    starttime
+    start_time
 
     cmd
     running_cmd
@@ -18,11 +18,11 @@ use Object::Tiny qw{
     tags
     ignore_stderr
     ignore_stdout
+    start_secs
+    stopwait_secs
     user
     group
     priority
-    start_secs
-    stopwait_secs
 };
 
 =encoding utf-8
@@ -53,6 +53,8 @@ ControlFreak::Service - Object representation of a service.
 
     ## A service can mutate
     $web->add_tag('prod');
+
+    ## all set_* accessors are callable from Commands
     $web->set_cmd("/usr/bin/plackup -a MyNewApp");
     $web->set_ignore_stderr(0);
     # ...
