@@ -67,7 +67,7 @@ services.
 =head1 SAMPLE CONFIG
 
   # management port
-  console address 127.0.0.1:113311
+  console address 127.0.0.1:11311
   console full = on # enable this only if you know what you are doing
 
   logger config = /etc/cfk/logger.conf
