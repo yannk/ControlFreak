@@ -32,25 +32,25 @@ cfkctl - control ControlFreak!
 cfkctl [options] command [svcref ...]
 
  Options:
-    -y, --yes           run non-interactively without asking for confirmations
-    -h, --help          help
-    -m, --man           more help
-    --address=SOCK      unix or tcp socket to connect to ControlFreak
+    -y, --yes           Run non-interactively without asking for confirmations
+    -h, --help          Help
+    -m, --man           More help
+    --address=SOCK      Unix or tcp socket to connect to ControlFreak
                         [defaults to 127.0.0.1:11311]
 
  Commands:
-    up                make sure service is up
-    down              make sure service is down
-    restart           if service is up, restart it
-    destroy           down a service and deletes it
-    list              list all services
-    status            print statuses of services
+    up                  Make sure service is up
+    down                Make sure service is down
+    restart             If service is up, restart it
+    destroy             Down a service and deletes it
+    list                List all services
+    status              Print statuses of services
 
  Services references:
-    all               All known services [default]
-    svcname           A string of the name of the service
-    @tag              All services tagged with the tag C<tag>
-    :status           All services of status C<status>
+    all                 All known services [default]
+    svcname             A string of the name of the service
+    @tag                All services tagged with the tag C<tag>
+    :status             All services of status C<status>
 
   List of statuses:
     up
