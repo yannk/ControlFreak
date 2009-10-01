@@ -4,6 +4,11 @@ use strict;
 use 5.008_001;
 our $VERSION = '0.01';
 
+use Object::Tiny qw{
+    config_file
+    console
+};
+
 =encoding utf-8
 
 =head1 NAME
@@ -16,7 +21,7 @@ ControlFreak - a process supervisor
     ## the shell
 
     $cntl = ControlFreak->new(
-        config => $config_file,
+        config_file => $config_file,
     );
     $cntl->run; # enter the event loop, returns only for exiting
 
@@ -24,6 +29,7 @@ ControlFreak - a process supervisor
     $cntl->add_socket($sock);
     $sock = $cntl->socketmap->{$sockname};
 
+    $svc = $cntl->find_or_create($svcname);
     $cntl->add_service($svc);
     $svc = $cntl->servicemap->{$svcname};
 
@@ -32,7 +38,10 @@ ControlFreak - a process supervisor
 
     $cntl->destroy_service($svcname);
 
-    my $con = $cntl->console
+    $cntl->set_console($con);
+    $con = $cntl->console;
+    $log = $cntl->logger;
+
     $cntl->reload_config;
 
 =head1 DESCRIPTION
@@ -84,8 +93,42 @@ The absolute path to a initial config file.
 
 =back
 
+=cut
+
+sub new {
+    my $cntl = shift->SUPER::new(@_);
+    $cntl->{servicemap} = {};
+    $cntl->{socketmap}  = {};
+    return $cntl;
+}
+
+=head2 services
+
+returns an array of L<ControlFreak::Service> instances known to this
+controller.
 
 =cut
+
+sub services {
+    my $cntl = shift;
+    return values %{ $cntl->{servicemap} };
+}
+
+=head2 set_console
+
+Take a L<ControlFreak::Console> instance in parameter and set it
+has the console.
+
+=cut
+
+sub set_console {
+    my $cntl = shift;
+    my $con = shift;
+
+    $cntl->{console} = $con;
+    return;
+}
+
 
 =head1 AUTHOR
 
@@ -97,6 +140,20 @@ This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =head1 SEE ALSO
+
+I think the venerable (but hatred) daemontools is the ancestor of all
+supervisor processes. In the same class there is also runit and monit.
+
+More recent modules which inspired ControlFreak are God and Supervisord
+in Python. Surprisingly I didn't find any similar program in Perl. Some
+ideas in ControlFreak are subtely different though.
+
+=head1 WHY?
+
+There are many similar programs freely available, but as stated above,
+ControlFreak does a few things differently (and hopefully better), also having
+ControlFreak written in Perl can be an important acceptance factor for some
+software shop :)
 
 =cut
 
