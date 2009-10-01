@@ -35,7 +35,7 @@ The callback called when the command failed.
 
 A boolean that if set gives access to the entire set of commands.
 
-=item * cntl
+=item * ctrl
 
 The controller.
 
@@ -78,7 +78,7 @@ sub process_service {
     my $cmd  = $param{cmd};
     my $ok   = $param{ok_cb};
     my $err  = $param{err_cb};
-    my $cntl = $param{cntl};
+    my $ctrl = $param{ctrl};
 
     $err->("not authorized")
         unless $param{has_priv};
@@ -92,7 +92,7 @@ sub process_service {
     else {
         $err->("malformed service command");
     }
-    my $svc = $cntl->find_or_create_svc($svcname);
+    my $svc = $ctrl->find_or_create_svc($svcname);
     #$svc->
 }
 

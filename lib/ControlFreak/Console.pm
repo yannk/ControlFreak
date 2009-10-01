@@ -16,9 +16,9 @@ use Object::Tiny qw{
 sub new {
     my $console = shift->SUPER::new(@_);
     my %param = @_;
-    $console->{cntl} = $param{cntl}
+    $console->{ctrl} = $param{ctrl}
         or croak "Console requires a controller";
-    $param{cntl}->set_console($console);
+    $param{ctrl}->set_console($console);
     return $console;
 }
 
@@ -38,7 +38,7 @@ ControlFreak::Console - Handles all communications with ControlFreak
         host    => $host,
         service => $service,
         full    => 1,
-        cntl    => $cntl,
+        ctrl    => $ctrl,
     );
     $con->start;
 
@@ -61,12 +61,12 @@ Start the console and return guard for it.
 
 sub start {
     my $console = shift;
-    my $cntl = $console->{cntl};
+    my $ctrl = $console->{ctrl};
 
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
         INFO "new connection to admin $host:$port";
-#        $cntl->accept_admin_connection($fh);
+#        $ctrl->accept_admin_connection($fh);
     };
 
     my $prepare_cb = sub {

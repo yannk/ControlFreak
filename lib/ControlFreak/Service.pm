@@ -49,7 +49,7 @@ ControlFreak::Service - Object representation of a service.
         cmd => "/usr/bin/memcached",
     );
 
-    my $fcgisock = $cntl->socketmap->{fcgi};
+    my $fcgisock = $ctrl->socketmap->{fcgi};
     my $web = ControlFreak::Service->new(
         name => "fcgi",
         desc => "I talk http",
@@ -85,7 +85,7 @@ constructor.
 sub new {
     my $svc = shift->SUPER::new(@_);
     my %param = @_;
-    $svc->{cntl} = $param{cntl}
+    $svc->{ctrl} = $param{ctrl}
         or croak "Service requires a controller";
     return $svc;
 }
@@ -299,7 +299,7 @@ sub set_cmd {
 
 sub _run_cmd {
     my $svc = shift;
-    my $cntl = $svc->{cntl};
+    my $ctrl = $svc->{ctrl};
     INFO sprintf "starting %s", $svc->name;
 
     my %stds = (
@@ -315,7 +315,7 @@ sub _run_cmd {
         $svc->{stderr} = $r;
         $stds{"2>"}    = $w;
 
-        ## FIXME: install a std $cntl->logger watcher
+        ## FIXME: install a std $ctrl->logger watcher
         $svc->{stderr_cv} = AE::io $r, 0, sub {
             my $input = <$r>;
             return unless defined $input;

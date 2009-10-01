@@ -22,29 +22,29 @@ ControlFreak - a process supervisor
     ## see L<cvk> and L<cvkctl> manpages for how to run ControlFreak from
     ## the shell
 
-    $cntl = ControlFreak->new(
+    $ctrl = ControlFreak->new(
         config_file => $config_file,
     );
-    $cntl->run; # enter the event loop, returns only for exiting
+    $ctrl->run; # enter the event loop, returns only for exiting
 
     ## elsewhere in the eventloop
-    $cntl->add_socket($sock);
-    $sock = $cntl->socketmap->{$sockname};
+    $ctrl->add_socket($sock);
+    $sock = $ctrl->socketmap->{$sockname};
 
-    $svc = $cntl->find_or_create($svcname);
-    $cntl->add_service($svc);
-    $svc = $cntl->servicemap->{$svcname};
+    $svc = $ctrl->find_or_create($svcname);
+    $ctrl->add_service($svc);
+    $svc = $ctrl->servicemap->{$svcname};
 
-    @svcs = $cntl->service_by_tag($tag);
-    @svcs = $cntl->services;
+    @svcs = $ctrl->service_by_tag($tag);
+    @svcs = $ctrl->services;
 
-    $cntl->destroy_service($svcname);
+    $ctrl->destroy_service($svcname);
 
-    $cntl->set_console($con);
-    $con = $cntl->console;
-    $log = $cntl->logger;
+    $ctrl->set_console($con);
+    $con = $ctrl->console;
+    $log = $ctrl->logger;
 
-    $cntl->reload_config;
+    $ctrl->reload_config;
 
 =head1 DESCRIPTION
 
@@ -98,10 +98,10 @@ The absolute path to a initial config file.
 =cut
 
 sub new {
-    my $cntl = shift->SUPER::new(@_);
-    $cntl->{servicemap} = {};
-    $cntl->{socketmap}  = {};
-    return $cntl;
+    my $ctrl = shift->SUPER::new(@_);
+    $ctrl->{servicemap} = {};
+    $ctrl->{socketmap}  = {};
+    return $ctrl;
 }
 
 =head2 services
@@ -112,8 +112,8 @@ controller.
 =cut
 
 sub services {
-    my $cntl = shift;
-    return values %{ $cntl->{servicemap} };
+    my $ctrl = shift;
+    return values %{ $ctrl->{servicemap} };
 }
 
 =head2 set_console
@@ -124,10 +124,10 @@ has the console.
 =cut
 
 sub set_console {
-    my $cntl = shift;
+    my $ctrl = shift;
     my $con = shift;
 
-    $cntl->{console} = $con;
+    $ctrl->{console} = $con;
     return;
 }
 
@@ -140,18 +140,18 @@ declared and returned.
 =cut
 
 sub find_or_create_svc {
-    my $cntl = shift;
+    my $ctrl = shift;
     my $svcname = shift;
-    my $svc = $cntl->{servicemap}->{$svcname};
+    my $svc = $ctrl->{servicemap}->{$svcname};
     return $svc if $svc;
 
     $svc = ControlFreak::Service->new(
         name  => $svcname,
         state => 'stopped',
-        cntl  => $cntl,
+        ctrl  => $ctrl,
     );
 
-    return $cntl->{servicemap}->{$svcname} = $svc;
+    return $ctrl->{servicemap}->{$svcname} = $svc;
 }
 
 =head1 AUTHOR

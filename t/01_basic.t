@@ -9,25 +9,25 @@ use_ok 'ControlFreak::Console';
 
 # bare, useless controller
 {
-    my $cntl = ControlFreak->new();
-    isa_ok $cntl, 'ControlFreak';
-    ok !$cntl->config_file, "no config";
-    ok !$cntl->console, "no console";
-    ok !$cntl->services, "no services";
+    my $ctrl = ControlFreak->new();
+    isa_ok $ctrl, 'ControlFreak';
+    ok !$ctrl->config_file, "no config";
+    ok !$ctrl->console, "no console";
+    ok !$ctrl->services, "no services";
 }
 
 ## console
 {
     ## FIXME, what is that module that look for available ports?
     my $port = 3833;
-    my $cntl = ControlFreak->new();
+    my $ctrl = ControlFreak->new();
     my $con = ControlFreak::Console->new(
         host => '127.0.0.1',
         service => $port,
         full => 1,
-        cntl => $cntl,
+        ctrl => $ctrl,
     );
-    is $cntl->console, $con, "Console assigned";
+    is $ctrl->console, $con, "Console assigned";
     my $cv = AE::cv;
     my $g = $con->start;
 
@@ -45,8 +45,8 @@ use_ok 'ControlFreak::Console';
 
 ## create our first service, and manipulate it
 {
-    my $cntl = ControlFreak->new();
-    my $svc = $cntl->find_or_create_svc('testsvc');
+    my $ctrl = ControlFreak->new();
+    my $svc = $ctrl->find_or_create_svc('testsvc');
     isa_ok $svc, 'ControlFreak::Service';
     is $svc->name, 'testsvc', "name is set";
     is $svc->cmd, undef, "no command";
