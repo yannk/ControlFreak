@@ -72,23 +72,23 @@ services.
 
   logger config = /etc/cfk/logger.conf
 
-  service memcached cmd = "/usr/bin/memcached -p 11211"
+  service memcached cmd = /usr/bin/memcached -p 11211
   service memcached ignore_stderr = 1
   service memcached tags = prod
-  service memcached-test cmd = "/usr/bin/memcached -p 12221"
+  service memcached-test cmd = /usr/bin/memcached -p 12221
   service memcached tags = test,optional
-  service perlbal cmd = "/usr/bin/perlbal -c /etc/perlbal.conf"
+  service perlbal cmd = /usr/bin/perlbal -c /etc/perlbal.conf
   service perlbal tags = prod
 
   socket fcgisock address = "127.0.0.1:8080"
   socket fcgisock options = TBD
 
   ## webNNN share a common socket through their stdin
-  service web001 cmd = "/usr/bin/plackup -a /home/www/app.psgi -s FCGI"
+  service web001 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
   service web001 stdin = fcgisock
   service web001 tags = prod,webs
 
-  service web002 cmd = "/usr/bin/plackup -a /home/www/app.psgi -s FCGI"
+  service web002 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
   service web002 stdin = fcgisock
   service web002 tags = prod,webs
 
