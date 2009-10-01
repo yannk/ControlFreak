@@ -148,9 +148,10 @@ sub find_or_create_svc {
     $svc = ControlFreak::Service->new(
         name  => $svcname,
         state => 'stopped',
+        cntl  => $cntl,
     );
 
-    return $svc->{servicemap}->{$svcname} = $svc;
+    return $cntl->{servicemap}->{$svcname} = $svc;
 }
 
 =head1 AUTHOR
