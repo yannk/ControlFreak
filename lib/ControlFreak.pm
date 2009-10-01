@@ -9,6 +9,8 @@ use Object::Tiny qw{
     console
 };
 
+use ControlFreak::Service;
+
 =encoding utf-8
 
 =head1 NAME
@@ -129,6 +131,27 @@ sub set_console {
     return;
 }
 
+=head2 find_or_create_svc($name)
+
+Given a service name in parameter (a string), searches for an existing
+defined service with that name, if not found, then a new service is
+declared and returned.
+
+=cut
+
+sub find_or_create_svc {
+    my $cntl = shift;
+    my $svcname = shift;
+    my $svc = $cntl->{servicemap}->{$svcname};
+    return $svc if $svc;
+
+    $svc = ControlFreak::Service->new(
+        name  => $svcname,
+        state => 'stopped',
+    );
+
+    return $svc->{servicemap}->{$svcname} = $svc;
+}
 
 =head1 AUTHOR
 

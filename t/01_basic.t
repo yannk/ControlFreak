@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 9;
+use Test::More tests => 14;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -8,7 +8,7 @@ use AnyEvent::Handle;
 use_ok 'ControlFreak::Console';
 
 # bare, useless controller
-{ 
+{
     my $cntl = ControlFreak->new();
     isa_ok $cntl, 'ControlFreak';
     ok !$cntl->config_file, "no config";
@@ -42,3 +42,13 @@ use_ok 'ControlFreak::Console';
     $cv->recv;
 }
 
+{
+    my $cntl = ControlFreak->new();
+    my $svc = $cntl->find_or_create_svc('testsvc');
+    isa_ok $svc, 'ControlFreak::Service';
+    is $svc->name, 'testsvc', "name is set";
+    is $svc->cmd, undef, "no command";
+    is $svc->start_time, undef;
+    is $svc->state, 'stopped';
+
+}

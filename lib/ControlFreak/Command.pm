@@ -92,7 +92,7 @@ sub process_service {
     else {
         $err->("malformed service command");
     }
-    my $svc = $cntl->find_or_create($svcname);
+    my $svc = $cntl->find_or_create_svc($svcname);
 }
 
 "cd&c";
