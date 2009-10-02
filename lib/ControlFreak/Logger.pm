@@ -2,11 +2,28 @@ package ControlFreak::Logger;
 use strict;
 use warnings;
 
+use Log::Log4perl;
+use Log::Log4perl::Level;
+
 use Object::Tiny qw{
 };
 
-sub add_handle {
-    my $console = shift;
+sub svc_watcher {
+    my $logger = shift;
+    ## type is 'out' our 'err'
+    my ($type, $svcname) = @_;
+
+    my $l4p = Log::Log4perl->get_logger("service.$svcname");
+    ## configurable?
+    my $loglevel = $type eq 'err' ? $ERROR : $INFO;
+    my $watcher_cb = sub {
+        my $msg = shift;
+        return unless defined $msg;
+        chomp $msg if $msg;
+        $l4p->log($loglevel, $msg);
+        return;
+    };
+    return $watcher_cb;
 }
 
 =head1 NAME

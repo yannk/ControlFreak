@@ -375,21 +375,19 @@ sub _run_cmd {
     );
     $stds{"<"} = $svc->pipe_stdin if $svc->pipe_stdin;
 
-    unless ($svc->ignore_stderr) {
-        my ($r, $w) = AnyEvent::Util::portable_pipe;
-        croak "couldn't create a pipe" unless $r;
-        $svc->{stderr} = $r;
-        $stds{"2>"}    = $w;
-
-        ## FIXME: install a std $ctrl->logger watcher
-        $svc->{stderr_cv} = AE::io $r, 0, sub {
-            my $input = <$r>;
-            return unless defined $input;
-            chomp $input;
-            WARN "XXX $input";
-        };
+    ## what happens when the config changes?
+    ## watcher *won't* get redefined leading to configuration
+    ## not being takin into account until restart of the svc.
+    ## should we have a watcher reloading function? that will
+    if (my $logger = $ctrl->logger) {
+        ## XXX verify leaks
+        if (! $svc->ignore_stdout) {
+            $stds{">"} = $logger->svc_watcher(out => $svc->name);
+        }
+        unless ($svc->ignore_stderr ) {
+            $stds{"2>"} = $logger->svc_watcher(err => $svc->name);
+        }
     }
-    ## FIXME: ignore_stdout
 
     $svc->{child_cv} = AnyEvent::Util::run_cmd(
         $svc->cmd,
@@ -410,8 +408,6 @@ sub _run_cmd {
             $state = "done";
         }
         $svc->{state} = $state;
-        $svc->{stderr_cv} = undef;
-        $svc->{stderr} = undef;
     });
     return 1;
 }

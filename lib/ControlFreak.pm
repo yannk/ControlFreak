@@ -7,6 +7,7 @@ our $VERSION = '0.01';
 use Object::Tiny qw{
     config_file
     console
+    logger
 };
 
 use ControlFreak::Service;
@@ -56,6 +57,8 @@ It is not a replacement for the init process, init.d etc... The initial goal
 of ControlFreak is to simplify the management of all the processes required
 to run a modern web application. An average web app would use:
 
+Instances of this main L<ControlFreak> class are called controller, C<ctrl>.
+
 =over 4
 
 =item * Memcached
@@ -101,6 +104,7 @@ sub new {
     my $ctrl = shift->SUPER::new(@_);
     $ctrl->{servicemap} = {};
     $ctrl->{socketmap}  = {};
+
     return $ctrl;
 }
 
@@ -166,6 +170,12 @@ sub find_or_create_svc {
 
     return $ctrl->{servicemap}{$svcname} = $svc;
 }
+
+=head2 logger
+
+return the logger attached to the controller
+
+=cut
 
 =head1 AUTHOR
 
