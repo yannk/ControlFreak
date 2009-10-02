@@ -381,7 +381,7 @@ sub _run_cmd {
     ## should we have a watcher reloading function? that will
     if (my $logger = $ctrl->logger) {
         ## XXX verify leaks
-        if (! $svc->ignore_stdout) {
+        unless ($svc->ignore_stdout) {
             $stds{">"} = $logger->svc_watcher(out => $svc->name);
         }
         unless ($svc->ignore_stderr ) {
