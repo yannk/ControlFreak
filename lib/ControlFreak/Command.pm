@@ -2,6 +2,11 @@ package ControlFreak::Command;
 use strict;
 use warnings;
 
+use ControlFreak::Service;
+use ControlFreak::Console;
+use ControlFreak::Socket;
+use Params::Util qw{ _IDENTIFIER };
+
 =encoding utf-8
 
 =head1 NAME
@@ -58,15 +63,15 @@ sub process {
     $cmd =~ s/^\s+//;  # leading whitespaces
     $cmd =~ s/\s+$//;  # trailing whitespaces
 
-    return $err->("command is void") unless $string;
+    return $err->("command is void") unless $cmd;
 
-    my ($kw, $rest) = split /\s+/, $string;
+    my ($kw, $rest) = split /\s+/, $cmd, 2;
 
     return $err->("empty command") unless $kw;
 
-    my $meth = "process_$meth";
+    my $meth = "process_$kw";
     my $h = $class->can($meth);
-    return $err->("unknown command '$kw'");
+    return $err->("unknown command '$kw'") unless $h;
 
     return $h->( $class, %param, cmd => $rest );
 }
@@ -80,20 +85,45 @@ sub process_service {
     my $err  = $param{err_cb};
     my $ctrl = $param{ctrl};
 
-    $err->("not authorized")
+    return $err->("not authorized")
         unless $param{has_priv};
 
-    my $svcname;
-    my $assignement;
-    if ($cmd =~ /^([\w-]+)\s+(.+)$/) {
-        $svcname = $1;
-        $assignement = $2;
+    return $err->("empty service command") unless $cmd;
+
+    my ($svcname, $attr, $assignement);
+    if ($cmd =~ /^([\w-]+)\s+([\w-]+)\s*=(.*)$/) {
+        $svcname     = $1;
+        $attr        = $2;
+        $assignement = $3;
     }
     else {
-        $err->("malformed service command");
+        return $err->("malformed service command $cmd");
     }
-    my $svc = $ctrl->find_or_create_svc($svcname);
-    #$svc->
+
+    my $svc = $ctrl->find_or_create_svc($svcname)
+        or return $err->("service name is invalid");
+
+    ## attributes existence check
+    my $meth = "set_$attr";
+    my $h = $svc->can($meth);
+    return $err->("invalid property '$attr'")
+        unless $h;
+
+    ## Clean the value, before assigning it
+    my $success;
+    my $value = $assignement;
+    $value =~ s/^\s+//;
+    if (defined $value && ! length $value) {
+        $value = undef;
+    }
+    if (defined $value) {
+        $success = $h->($svc, $value);
+    }
+    else {
+        $success = $svc->unset($attr);
+    }
+
+    return $success ? $ok->() : $err->("invalid value");
 }
 
 "cd&c";

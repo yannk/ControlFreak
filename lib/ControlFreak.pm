@@ -116,6 +116,18 @@ sub services {
     return values %{ $ctrl->{servicemap} };
 }
 
+=head2 service($name)
+
+Return the service of name C<$name> or nothing.
+
+=cut
+
+sub service {
+    my $ctrl = shift;
+    my ($svcname) = shift or return;
+    return $ctrl->{servicemap}{$svcname};
+}
+
 =head2 set_console
 
 Take a L<ControlFreak::Console> instance in parameter and set it
@@ -142,7 +154,7 @@ declared and returned.
 sub find_or_create_svc {
     my $ctrl = shift;
     my $svcname = shift;
-    my $svc = $ctrl->{servicemap}->{$svcname};
+    my $svc = $ctrl->{servicemap}{$svcname};
     return $svc if $svc;
 
     $svc = ControlFreak::Service->new(
@@ -150,8 +162,9 @@ sub find_or_create_svc {
         state => 'stopped',
         ctrl  => $ctrl,
     );
+    return unless $svc;
 
-    return $ctrl->{servicemap}->{$svcname} = $svc;
+    return $ctrl->{servicemap}{$svcname} = $svc;
 }
 
 =head1 AUTHOR

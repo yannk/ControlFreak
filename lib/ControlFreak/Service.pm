@@ -8,8 +8,10 @@ use AnyEvent '5.202';
 use AnyEvent::Util();
 use AnyEvent::Handle();
 use Carp;
+use Params::Util qw{ _NUMBER _STRING _IDENTIFIER };
 
-## stdin option name sucks?
+use constant DEFAULT_START_SECS => 1;
+
 use Object::Tiny qw{
     name
     desc
@@ -23,7 +25,7 @@ use Object::Tiny qw{
     running_cmd
     env
     cwd
-    stdin
+    pipe_stdin
     tags
     ignore_stderr
     ignore_stdout
@@ -53,7 +55,7 @@ ControlFreak::Service - Object representation of a service.
     my $web = ControlFreak::Service->new(
         name => "fcgi",
         desc => "I talk http",
-        stdin => $fcgisock,
+        pipe_stdin => $fcgisock,
         cmd => "/usr/bin/plackup -a MyApp -s FCGI",
     );
     $web->up;
@@ -85,6 +87,12 @@ constructor.
 sub new {
     my $svc = shift->SUPER::new(@_);
     my %param = @_;
+
+    ## validate the service name
+    unless (_IDENTIFIER($svc->name)) {
+        return;
+    }
+
     $svc->{ctrl} = $param{ctrl}
         or croak "Service requires a controller";
     return $svc;
@@ -101,10 +109,22 @@ sub is_fail {
     return $state eq 'failed';
 }
 
+=head2 is_running
+
+return true if the state is 'runnnig'
+
+=cut
+
 sub is_running {
     my $state = shift->state || "";
     return $state eq 'running';
 }
+
+=head2 is_starting
+
+return true if the state is 'starting'
+
+=cut
 
 sub is_starting {
     my $state = shift->state || "";
@@ -259,7 +279,7 @@ sub start {
     $svc->{start_time} = time;
     $svc->{state} = 'starting';
     $svc->_run_cmd;
-    my $start_secs = 10; ## XXX
+    my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
     $svc->{start_cv} = AnyEvent->timer(
         after => $start_secs,
         cb    => sub { $svc->_check_running_state },
@@ -277,6 +297,11 @@ sub _check_running_state {
     $svc->{state} = 'running';
 }
 
+=head2 up(%param)
+
+XXX up the service (do nothing if already up)
+=cut
+
 sub up {
     my $svc = shift;
     return if $svc->is_up;
@@ -284,17 +309,58 @@ sub up {
     return;
 }
 
-sub set_cmd {
+=head2 up(%param)
+
+XXX down the service (do nothing if already down)
+=cut
+
+sub down {
     my $svc = shift;
-    my $cmd = shift;
-    my $old = $svc->cmd;
+    return if $svc->is_down;
+    $svc->stop();
+    return;
+}
+
+=head2 restart(%param)
+
+=cut
+sub restart {
+    my $svc = shift;
+    die "snif";
+}
+
+sub _set {
+    my $svc = shift;
+    my ($attr, $value) = @_;
+
+    my $old = $svc->$attr;
+
+    my $v = defined $value ? $value : "~";
     if ($old) {
-        INFO "Changing command from '$old' to '$cmd'";
+        INFO "Changing $attr from '$old' to '$v'";
     }
     else {
-        INFO "Setting command to '$cmd'";
+        INFO "Setting $attr to '$v'";
     }
-    $svc->{cmd} = $cmd;
+    $svc->{$attr} = $value;
+    return 1;
+}
+
+sub unset {
+    my $svc = shift;
+    my $attr = shift;
+    $svc->{$attr} = undef;
+    return 1;
+}
+
+sub set_cmd {
+    my $value = _STRING($_[1]) or return;
+    shift->_set('cmd', $value);
+}
+
+sub set_start_secs {
+    my $value = _NUMBER($_[1]) or return;
+    shift->_set('start_secs', $value);
 }
 
 sub _run_cmd {
@@ -307,7 +373,7 @@ sub _run_cmd {
         "2>" => "/dev/null",
         ">"  => "/dev/null",
     );
-    $stds{"<"} = $svc->stdin if $svc->stdin;
+    $stds{"<"} = $svc->pipe_stdin if $svc->pipe_stdin;
 
     unless ($svc->ignore_stderr) {
         my ($r, $w) = AnyEvent::Util::portable_pipe;

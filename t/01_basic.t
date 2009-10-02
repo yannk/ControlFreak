@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 36;
+use Test::More tests => 38;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -58,8 +58,16 @@ use_ok 'ControlFreak::Console';
     ok !$svc->is_fail, "not fail";
     ok  $svc->is_stopped, "yes, it's stop";
 
-    ## start is doomed to fail without a declared command
+    ## Cannot stop a not started service
     my $called = 0; # err_cb is called synchronously
+    $svc->stop(
+        err_cb => sub {  $called++; like shift, qr/already down/ },
+        ok_cb  => sub { ok 0, "Oh noes!" },
+    );
+    is $called, 1, "Called indeed";
+
+    ## start is doomed to fail without a declared command
+    $called = 0; # err_cb is called synchronously
     $svc->start(err_cb => sub {
         ok "got an error";
         like shift, qr/command/;
@@ -87,4 +95,6 @@ use_ok 'ControlFreak::Console';
     ok  $svc->is_up;
     ok !$svc->is_stopped;
     is  $svc->state, "starting";
+
+    $svc->stop;
 }
