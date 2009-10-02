@@ -81,8 +81,8 @@ sub process_service {
     my %param = @_;
 
     my $cmd  = $param{cmd};
-    my $ok   = $param{ok_cb};
-    my $err  = $param{err_cb};
+    my $ok   = $param{ok_cb} || sub {};
+    my $err  = $param{err_cb} || sub {};
     my $ctrl = $param{ctrl};
 
     return $err->("not authorized")
