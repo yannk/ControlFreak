@@ -85,11 +85,11 @@ services.
 
   ## webNNN share a common socket through their stdin
   service web001 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
-  service web001 stdin = fcgisock
+  service web001 pipe_stdin = fcgisock
   service web001 tags = prod,webs
 
   service web002 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
-  service web002 stdin = fcgisock
+  service web002 pipe_stdin = fcgisock
   service web002 tags = prod,webs
 
   # start random stuff
