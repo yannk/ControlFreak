@@ -191,10 +191,12 @@ sub fail_reason {
     my $svc = shift;
     return unless $svc->is_fail;
     my $status = $svc->{fail_status};
-    my $exit_status = $status >> 8;
-    my $signal      = $status & 127;
+    return unless POSIX::WIFEXITED($status);
+    my $exit_status = POSIX::WEXITSTATUS($status);
+    my $signal      = POSIX::WTERMSIG($status);
+
     my $reason = "Exited with $exit_status";
-    $reason .= "; received $signal" if $signal;
+    $reason .= "; received $signal" if POSIX::WIFSIGNALED($status);
     return $reason;
 }
 
@@ -420,7 +422,7 @@ sub _run_cmd {
     $svc->{child_cv}->cb( sub {
         my $status = shift()->recv;
         my $state;
-        if ($status && $status & 127 == POSIX::SIGTERM) { # XXX
+        if (POSIX::WIFEXITED($status) && !POSIX::WEXITSTATUS($status)) {
             INFO "child exited";
             $state = "stopped";
         }

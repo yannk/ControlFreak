@@ -130,6 +130,17 @@ use_ok 'ControlFreak::Console';
     ok $svc->is_down, "so now we are down";
     like $svc->fail_reason, qr/255/, "exit code";
     unlike $svc->fail_reason, qr/signal/, "no signal";
+
+    $svc->set_cmd(q/perl -e 'kill 9, $$;'/);
+    $svc->start;
+    ok wait_for_fail($svc, 2);
+    like $svc->fail_reason, qr/Exited with \d/, "exit code";
+    like $svc->fail_reason, qr/signal 9/, "no signal";
+
+    $svc->set_cmd(q/perl -e 'sleep 100'/);
+    $svc->start;
+    ok wait_for_fail($svc, 100);
+    like $svc->fail_reason, qr/signal 9/, "no signal";
 }
 
 sub wait_for_down { wait_for_status('is_down', @_) }
