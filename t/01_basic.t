@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 50;
+use Test::More tests => 57;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -97,7 +97,7 @@ use_ok 'ControlFreak::Console';
                  err_cb => sub { ok 0, "oh noes" } );
 
     like $svc->pid, qr/^\d+$/;
-    ok  $svc->start_time, "now we have a start time";
+    ok  my $prev_start_time = $svc->start_time, "now we have a start time";
     ok !$svc->is_running;
     ok  $svc->is_starting;
     ok !$svc->is_down;
@@ -120,14 +120,25 @@ use_ok 'ControlFreak::Console';
     ok  $svc->stop_time;
     ok !$svc->start_time;
     ok !$svc->pid;
+
+    $svc->set_cmd(q/perl -e 'die "oh noes"'/);
+    $svc->start;
+    ok $svc->pid, "got a pid";
+    ok $svc->is_starting, "is starting (well supposedly)";
+    ok $svc->start_time >= $prev_start_time, "new start time";
+    ok wait_for_fail($svc, 2);
+    ok $svc->is_down, "so now we are down";
+    like $svc->fail_reason, qr/255/, "exit code";
+    unlike $svc->fail_reason, qr/signal/, "no signal";
 }
 
 sub wait_for_down { wait_for_status('is_down', @_) }
+sub wait_for_fail { wait_for_status('is_fail', @_) }
 
 sub wait_for_status {
     my $cond = shift;
     my $svc = shift;
-    my $max_wait = shift || 10;
+    my $max_wait = shift || 1;
     my $iv = 0.05;
     my $stopped = AE::cv;
     my $t0 = [gettimeofday];

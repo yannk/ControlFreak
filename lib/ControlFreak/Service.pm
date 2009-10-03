@@ -106,7 +106,7 @@ return true if the state is 'failed'
 
 sub is_fail {
     my $state = shift->state || "";
-    return $state eq 'failed';
+    return $state eq 'fail';
 }
 
 =head2 is_running
@@ -189,7 +189,12 @@ Returns the reason of the failure, or undef.
 sub fail_reason {
     my $svc = shift;
     return unless $svc->is_fail;
-    return $svc->{fail_reason} || "unknown reason";
+    my $status = $svc->{fail_status};
+    my $exit_status = $status >> 8;
+    my $signal      = $status & 127;
+    my $reason = "Exited with $exit_status";
+    $reason .= "; received $signal" if $signal;
+    return $reason;
 }
 
 =head2 stop(%param)
@@ -414,13 +419,13 @@ sub _run_cmd {
     $svc->{child_cv}->cb( sub {
         my $status = shift()->recv;
         my $state;
-        warn "GOT STATUS $status" ;
         if ($status && $status eq 15) { # XXX
             INFO "child exited";
             $state = "stopped";
         }
         else {
-            ERROR "child terminated abnormally";
+            ERROR "child terminated abnormally $status";
+            $svc->{fail_status} = $status;
             $state = "fail";
         }
         $svc->{state} = $state;
