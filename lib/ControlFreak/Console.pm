@@ -61,17 +61,19 @@ Start the console and return guard for it.
 
 sub start {
     my $console = shift;
+    my %param   = @_;
     my $ctrl = $console->{ctrl};
 
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
-        INFO "new connection to admin $host:$port";
+        INFO "new connection to admin from $host:$port";
 #        $ctrl->accept_admin_connection($fh);
     };
 
     my $prepare_cb = sub {
         my ($fh, $host, $port) = @_;
         INFO "Admin interface started on $host:$port";
+        $param{prepare_cb}->(@_) if $param{prepare_cb};
         return 0;
     };
 

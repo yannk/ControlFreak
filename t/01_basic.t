@@ -4,6 +4,7 @@ use Test::More tests => 50;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
+use Test::FindFreePort;
 use Time::HiRes qw/gettimeofday tv_interval/;
 
 use_ok 'ControlFreak::Console';
@@ -19,29 +20,36 @@ use_ok 'ControlFreak::Console';
 
 ## console
 {
-    ## FIXME, what is that module that look for available ports?
-    my $port = 3833;
     my $ctrl = ControlFreak->new();
     my $con = ControlFreak::Console->new(
         host => '127.0.0.1',
-        service => $port,
+        service => 0,
         full => 1,
         ctrl => $ctrl,
     );
     is $ctrl->console, $con, "Console assigned";
-    my $cv = AE::cv;
-    my $g = $con->start;
+    my $port_cv = AE::cv;
 
-    my $clhdl; $clhdl = AnyEvent::Handle->new (
-        connect => [localhost => $port],
-        on_connect => sub { ok "1", "connected" },
-        on_eof => sub {
-            ok 1, "EOF called";
-            $cv->send;
-        },
-    );
-    $clhdl->push_read(sub { ok "read" });
-    $cv->recv;
+    my $g; $g = $con->start(prepare_cb => sub {
+        my ($fh, $host, $port) = @_;
+        $port_cv->send([ $host, $port ]);
+        return;
+    });
+
+    $port_cv->cb( sub {
+        my $conn_info = shift->recv;
+        my $cv = AE::cv;
+        my $clhdl; $clhdl = AnyEvent::Handle->new (
+            connect => $conn_info,
+            on_connect => sub { ok "1", "connected" },
+            on_eof => sub {
+                ok 1, "EOF called";
+                $cv->send;
+            },
+        );
+        $clhdl->push_read(sub { ok "read" });
+        $cv->recv;
+    });
 }
 
 ## create our first service, and manipulate it
