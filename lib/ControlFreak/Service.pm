@@ -9,6 +9,7 @@ use AnyEvent::Util();
 use AnyEvent::Handle();
 use Carp;
 use Params::Util qw{ _NUMBER _STRING _IDENTIFIER };
+use POSIX();
 
 use constant DEFAULT_START_SECS => 1;
 
@@ -419,7 +420,7 @@ sub _run_cmd {
     $svc->{child_cv}->cb( sub {
         my $status = shift()->recv;
         my $state;
-        if ($status && $status eq 15) { # XXX
+        if ($status && $status & 127 == POSIX::SIGTERM) { # XXX
             INFO "child exited";
             $state = "stopped";
         }
