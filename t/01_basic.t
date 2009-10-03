@@ -1,9 +1,10 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 38;
+use Test::More tests => 50;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
+use Time::HiRes qw/gettimeofday tv_interval/;
 
 use_ok 'ControlFreak::Console';
 
@@ -97,4 +98,37 @@ use_ok 'ControlFreak::Console';
     is  $svc->state, "starting";
 
     $svc->stop;
+    ## XXX Race condition?
+    is $svc->state, "stopping";
+    ok  $svc->is_stopping;
+    ok  $svc->is_up, "is up";
+    ok !$svc->is_down;
+    ok !$svc->is_running;
+    ok !$svc->is_fail;
+    ok !$svc->is_stopped;
+    ok !$svc->is_starting;
+
+    ok wait_for_down($svc);
+    ok  $svc->stop_time;
+    ok !$svc->start_time;
+    ok !$svc->pid;
+}
+
+sub wait_for_down { wait_for_status('is_down', @_) }
+
+sub wait_for_status {
+    my $cond = shift;
+    my $svc = shift;
+    my $max_wait = shift || 10;
+    my $iv = 0.05;
+    my $stopped = AE::cv;
+    my $t0 = [gettimeofday];
+    my $w; $w = AE::timer 0, $iv, sub {
+        my $timeout = tv_interval($t0) > $max_wait;
+        if ($svc->$cond or $timeout) {
+            $stopped->send(!$timeout);
+            undef $w;
+        }
+    };
+    return $stopped->recv;
 }

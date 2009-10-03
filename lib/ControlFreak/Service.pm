@@ -25,8 +25,8 @@ use Object::Tiny qw{
     running_cmd
     env
     cwd
-    pipe_stdin
     tags
+    pipe_stdin
     ignore_stderr
     ignore_stdout
     start_secs
@@ -131,6 +131,17 @@ sub is_starting {
     return $state eq 'starting';
 }
 
+=head2 is_stopping
+
+return true if the state is 'stopping'
+
+=cut
+
+sub is_stopping {
+    my $state = shift->state || "";
+    return $state eq 'stopping';
+}
+
 =head2 is_stopped
 
 return true is service is stopped
@@ -151,7 +162,7 @@ return true is service is up
 sub is_up {
     my $svc = shift;
     my $state = $svc->state || "";
-    return 0 unless $state eq 'running' or $state eq 'starting';
+    return 0 unless $state =~ /^(?:running|starting|stopping)$/;
 
     ## just in case, verify...
     return 0 unless defined $svc->{child_cv};
@@ -218,7 +229,7 @@ sub stop {
         $err->("Service '$svcname' is already down");
         return;
     }
-    if ($svc->pid) {
+    unless ($svc->pid) {
         $err->("Service '$svcname' lost its pid");
         return;
     }
@@ -226,8 +237,10 @@ sub stop {
     ## might have died just before we send the TERM signal, but
     ## we trust the kernel not to reallocate the pid in the meantime
     kill 'TERM', $svc->pid;
-    $ok->();
     $svc->{stop_time} = time;
+    $svc->{start_time} = undef;
+    $svc->{state} = 'stopping';
+    $ok->();
     return 1;
 }
 
@@ -277,6 +290,7 @@ sub start {
     }
 
     $svc->{start_time} = time;
+    $svc->{stop_time} = undef;
     $svc->{state} = 'starting';
     $svc->_run_cmd;
     my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
@@ -295,6 +309,7 @@ sub _check_running_state {
     return unless $state && $state eq 'starting';
     DEBUG "Now setting the service as running";
     $svc->{state} = 'running';
+    $svc->{start_cv} = undef;
 }
 
 =head2 up(%param)
@@ -399,15 +414,18 @@ sub _run_cmd {
     $svc->{child_cv}->cb( sub {
         my $status = shift()->recv;
         my $state;
-        if ($status) {
+        warn "GOT STATUS $status" ;
+        if ($status && $status eq 15) { # XXX
+            INFO "child exited";
+            $state = "stopped";
+        }
+        else {
             ERROR "child terminated abnormally";
             $state = "fail";
         }
-        else {
-            INFO "child exited";
-            $state = "done";
-        }
         $svc->{state} = $state;
+        $svc->{child_cv} = undef;
+        $svc->{pid} = undef;
     });
     return 1;
 }
