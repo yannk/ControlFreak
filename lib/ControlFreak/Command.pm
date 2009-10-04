@@ -121,8 +121,10 @@ sub process_console {
         $success = 1;
     }
     if ($attr eq 'full') {
-        my $value = _STRING($assignment)
-            or return $err->("invalid value for console.full");
+        my $value = _STRING($assignment);
+        unless (defined $value) {
+            return $err->("invalid value for console.full");
+        }
         return $err->("incorrect boolean for console.full")
             unless defined ($value = _as_bool($value));
         $console->{full} = $value;
@@ -213,8 +215,9 @@ sub process_command {
 }
 
 sub _as_bool {
-    return 1 if /^1| true| on| enabled|yes/xi;
-    return 0 if /^0|false|off|disabled| no/xi;
+    my $value = shift;
+    return 1 if $value =~ /^1| true| on| enabled|yes/xi;
+    return 0 if $value =~ /^0|false|off|disabled| no/xi;
     return;
 
 }
