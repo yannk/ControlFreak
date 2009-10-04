@@ -8,6 +8,7 @@ use AnyEvent '5.202';
 use AnyEvent::Util();
 use AnyEvent::Handle();
 use Carp;
+use Data::Dumper();
 use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY };
 use POSIX 'SIGTERM';
 
@@ -183,7 +184,7 @@ sub is_down {
 
 =head2 fail_reason
 
-Returns the reason of the failure, or undef.
+Returns a string with the reason of the failure, or undef.
 
 =cut
 
@@ -365,11 +366,14 @@ sub _set {
     my $old = $svc->$attr;
 
     my $v = defined $value ? $value : "~";
+    local $Data::Dumper::Indent = 0;
+    local $Data::Dumper::Terse = 1;
+    if (ref $v) {
+        $v = Data::Dumper::Dumper($v);
+    }
     if ($old) {
-        my $oldv = join ", ", @$old if ref $old;
-        $v = join ", ", @$v if ref $v;
-
-        #INFO "Changing $attr from '$old' to '$v'";
+        my $oldv = defined $old ? $old : "~";
+        $oldv = Data::Dumper::Dumper($oldv) if ref $oldv;
         INFO "Changing $attr from '$oldv' to '$v'";
     }
     else {
