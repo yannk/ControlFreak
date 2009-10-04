@@ -227,32 +227,6 @@ return the logger attached to the controller
 
 =cut
 
-=head2 command_*
-
-All accessible commands to the config and the console.
-
-=cut
-
-sub command_start {
-    my $ctrl = shift;
-    my %param = @_;
-
-    my $err  = _CODE($param{err_cb}) || sub {};
-    my $ok   = _CODE($param{ok_cb})  || sub {};
-    my @svcs = $ctrl->services_from_args(
-        %param, err_cb => $err, ok_cb => $ok,
-    );
-    if (! @svcs) {
-        return $err->("Couldn't find a valid service. bailing.");
-    }
-    my $n = 0;
-    for (@svcs) {
-        $_->start(err_cb => $err, ok_cb => sub { $n++ });
-    }
-    $ok->("started $n");
-    return;
-}
-
 =head2 services_from_args(%param)
 
 Given a list of arguments (typically from the console commands)
@@ -300,6 +274,33 @@ sub services_from_args {
         $err->("unknown selector '$selector'");
     }
     return ();
+}
+
+
+=head2 command_*
+
+All accessible commands to the config and the console.
+
+=cut
+
+sub command_start {
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $err  = _CODE($param{err_cb}) || sub {};
+    my $ok   = _CODE($param{ok_cb})  || sub {};
+    my @svcs = $ctrl->services_from_args(
+        %param, err_cb => $err, ok_cb => $ok,
+    );
+    if (! @svcs) {
+        return $err->("Couldn't find a valid service. bailing.");
+    }
+    my $n = 0;
+    for (@svcs) {
+        $_->start(err_cb => $err, ok_cb => sub { $n++ });
+    }
+    $ok->("started $n");
+    return;
 }
 
 sub command_list {
