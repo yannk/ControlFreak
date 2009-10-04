@@ -5,6 +5,7 @@ use warnings;
 use ControlFreak::Service;
 use ControlFreak::Console;
 use ControlFreak::Socket;
+use JSON::Any;
 use Params::Util qw{ _IDENTIFIER };
 
 =encoding utf-8
@@ -103,19 +104,26 @@ sub process_service {
     my $svc = $ctrl->find_or_create_svc($svcname)
         or return $err->("service name is invalid");
 
+    ## Clean the value, before assigning it
+    my $value = $assignement;
+    $value =~ s/^\s+//;
+    if (defined $value && ! length $value) {
+        $value = undef;
+    }
+
+    ## cmd is special because of the array syntax
+    if ($attr eq 'cmd') {
+        my $succ = $svc->set_cmd_from_con($value);
+        return $succ ? $ok->() : $err->("invalid value");
+    }
+
     ## attributes existence check
     my $meth = "set_$attr";
     my $h = $svc->can($meth);
     return $err->("invalid property '$attr'")
         unless $h;
 
-    ## Clean the value, before assigning it
     my $success;
-    my $value = $assignement;
-    $value =~ s/^\s+//;
-    if (defined $value && ! length $value) {
-        $value = undef;
-    }
     if (defined $value) {
         $success = $h->($svc, $value);
     }

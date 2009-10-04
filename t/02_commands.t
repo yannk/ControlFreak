@@ -1,13 +1,11 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 20;
+use Test::More tests => 42;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
 
-
 use_ok 'ControlFreak::Command';
-
 
 my $ctrl = ControlFreak->new();
 my $error;
@@ -61,6 +59,11 @@ sub process_ok {
     like_error qr/invalid prop/, has_priv => 1, cmd => "service cmdcmd a=b";
 
     like_error qr/not auth/, has_priv => 0, cmd => "service a cmd=b";
+
+    ## Invalid JSON
+    like_error qr/invalid value/, has_priv => 1, cmd => "service a cmd= [b";
+    like_error qr/invalid value/, has_priv => 1, cmd => "service a cmd= [[b";
+    like_error qr/invalid value/, has_priv => 1, cmd => "service a cmd=[{b}]";
 }
 
 ## valid commands
@@ -83,4 +86,8 @@ sub process_ok {
     is $svc->cmd, undef;
     process_ok(has_priv => 1, cmd => "service somesvc cmd=\n");
     is $svc->cmd, undef;
+
+    ## json array
+    process_ok(has_priv => 1, cmd => "service somesvc cmd=[\"a\", \"b\"]");
+    is_deeply $svc->cmd, ['a', 'b'];
 }

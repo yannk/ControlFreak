@@ -395,6 +395,17 @@ sub set_cmd {
     shift->_set('cmd', $value);
 }
 
+sub set_cmd_from_con {
+    my $svc = shift;
+    my $value = shift;
+    return $svc->unset('cmd') unless defined $value;
+    if ($value =~ /^\[/) {
+        $value = eval { JSON::Any->jsonToObj($value) };
+        return if $@;
+    }
+    return $svc->set_cmd($value);
+}
+
 sub set_start_secs {
     my $value = _NUMBER($_[1]) or return;
     shift->_set('start_secs', $value);
