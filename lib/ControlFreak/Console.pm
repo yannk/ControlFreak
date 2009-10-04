@@ -127,7 +127,8 @@ sub accept_connection {
             },
             ok_cb => sub {
                 my $out = shift || "";
-                $h->push_write("$out\nOK$CRLF");
+                $out .= "\n" if $out;
+                $h->push_write("${out}OK$CRLF");
             },
             has_priv => $console->full,
         );

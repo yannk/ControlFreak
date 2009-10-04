@@ -22,9 +22,9 @@ use Object::Tiny qw{
     pid
     start_time
     stop_time
+    running_cmd
 
     cmd
-    running_cmd
     env
     cwd
     tags
@@ -378,6 +378,8 @@ It consists in tab separated list of fields:
 
 =item * fail_reason
 
+=item * running_cmd
+
 =back
 
 =cut
@@ -385,7 +387,7 @@ It consists in tab separated list of fields:
 sub status_as_text {
     my $svc = shift;
     return join "\t", map { $svc->$_ || "" }
-           qw/name state pid start_time stop_time fail_reason/;
+           qw/name state pid start_time stop_time fail_reason running_cmd/;
 }
 
 =head2 desc_as_text
@@ -457,9 +459,41 @@ sub set_cmd_from_con {
     return $svc->set_cmd($value);
 }
 
+sub set_desc {
+    my $value = _STRING($_[1]) or return;
+    $value =~ s/[\n\r\t\0]+//g; ## desc should be one line
+    shift->_set('desc', $value);
+}
+
+sub set_tags {
+    my $value = _STRING($_[1]) or return;
+    $value =~ s/\s+//g; ## no space in tags thanks
+    shift->_set('tags', $value);
+}
+
+sub set_stopwait_secs {
+    my $value = _NUMBER($_[1]) or return;
+    shift->_set('stopwait_secs', $value);
+}
+
 sub set_start_secs {
     my $value = _NUMBER($_[1]) or return;
     shift->_set('start_secs', $value);
+}
+
+sub set_pipe_stdin {
+    my $value = _STRING($_[1]) or return;
+    shift->_set('pipe_stdin', $value);
+}
+
+sub set_ignore_stderr {
+    my $value = _STRING($_[1]) or return;
+    shift->_set('ignore_stderr', $value);
+}
+
+sub set_ignore_stdout {
+    my $value = _STRING($_[1]) or return;
+    shift->_set('ignore_stdout', $value);
 }
 
 sub _run_cmd {

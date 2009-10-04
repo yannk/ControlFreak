@@ -245,9 +245,11 @@ sub command_start {
     if (! @svcs) {
         return $err->("Couldn't find a valid service. bailing.");
     }
+    my $n = 0;
     for (@svcs) {
-        $_->start(err_cb => $err, ok_cb => $ok);
+        $_->start(err_cb => $err, ok_cb => sub { $n++ });
     }
+    $ok->("started $n");
     return;
 }
 
