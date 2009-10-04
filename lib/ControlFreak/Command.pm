@@ -189,6 +189,31 @@ sub process_service {
     return $success ? $ok->() : $err->("invalid value");
 }
 
+sub process_command {
+    my $class = shift;
+    my %param = @_;
+
+    my $cmd  = $param{cmd};
+    my $ok   = $param{ok_cb} || sub {};
+    my $err  = $param{err_cb} || sub {};
+    my $ctrl = $param{ctrl};
+
+    return $err->("empty command") unless $cmd;
+
+    my ($command, @args) = split /\s+/, $cmd;
+
+    return $err->("malformed service command '$cmd'")
+        unless $command or @args;
+
+    my $meth = "command_$command";
+    my $h = $ctrl->can($meth);
+    return $err->("unknown command '$command'") unless $h;
+    $h->($ctrl, @args);
+
+    return $ok->();
+#    return $success ? $ok->() : $err->("invalid value");
+}
+
 sub _as_bool {
     return 1 if /^1| true| on| enabled|yes/xi;
     return 0 if /^0|false|off|disabled| no/xi;

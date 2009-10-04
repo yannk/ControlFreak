@@ -220,6 +220,37 @@ return the logger attached to the controller
 
 =cut
 
+=head2 command_*
+
+All accessible commands to the config and the console.
+
+=cut
+
+## XXX FIXME
+sub command_start {
+    my $ctrl = shift;
+    my @svcs = $ctrl->services_from_args(@_);
+    for (@svcs) {
+        next unless $_;
+        warn "IS $_";
+        $_->start;
+    }
+}
+
+## XXX this is shortcuted
+sub services_from_args {
+    my $ctrl = shift;
+    my $svcname = shift;
+    return grep { defined $_ } ($ctrl->{servicemap}{$svcname});
+}
+sub command_list {
+    my $ctrl = shift;
+    my @svcs = values %{$ctrl->{servicemap}};
+    for (@svcs) {
+        print $_->text_status . "\n";
+    }
+}
+
 =head1 AUTHOR
 
 Yann Kerherve E<lt>yannk@cpan.orgE<gt>

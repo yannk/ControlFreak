@@ -359,6 +359,11 @@ sub restart {
     die "snif";
 }
 
+sub text_status {
+    my $svc = shift;
+    return join " ", map { $svc->$_ } qw/state name start_time stop_time fail_reason/;
+}
+
 sub _set {
     my $svc = shift;
     my ($attr, $value) = @_;
