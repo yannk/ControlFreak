@@ -208,10 +208,8 @@ sub process_command {
     my $meth = "command_$command";
     my $h = $ctrl->can($meth);
     return $err->("unknown command '$command'") unless $h;
-    $h->($ctrl, @args);
-
-    return $ok->();
-#    return $success ? $ok->() : $err->("invalid value");
+    $h->($ctrl, args => \@args, err_cb => $err, ok_cb => $ok);
+    return;
 }
 
 sub _as_bool {

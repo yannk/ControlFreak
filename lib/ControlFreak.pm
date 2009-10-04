@@ -15,6 +15,7 @@ use Log::Log4perl ':easy';
 Log::Log4perl->easy_init($DEBUG);
 use ControlFreak::Service;
 use ControlFreak::Command;
+use Params::Util qw{ _ARRAY _CODE };
 
 =encoding utf-8
 
@@ -38,7 +39,7 @@ ControlFreak - a process supervisor
 
     $svc = $ctrl->find_or_create($svcname);
     $ctrl->add_service($svc);
-    $svc = $ctrl->servicemap->{$svcname};
+    $svc = $ctrl->service($svcname);
 
     @svcs = $ctrl->service_by_tag($tag);
     @svcs = $ctrl->services;
@@ -226,26 +227,76 @@ All accessible commands to the config and the console.
 
 =cut
 
-## XXX FIXME
 sub command_start {
     my $ctrl = shift;
-    my @svcs = $ctrl->services_from_args(@_);
-    for (@svcs) {
-        next unless $_;
-        warn "IS $_";
-        $_->start;
+    my %param = @_;
+
+    my $err  = _CODE($param{err_cb}) || sub {};
+    my $ok   = _CODE($param{ok_cb})  || sub {};
+    my @svcs = $ctrl->services_from_args(
+        %param, err_cb => $err, ok_cb => $ok,
+    );
+    if (! @svcs) {
+        return $err->("Couldn't find a valid service. bailing.");
     }
+    for (@svcs) {
+        $_->start(err_cb => $err, ok_cb => $ok);
+    }
+    return;
 }
 
-## XXX this is shortcuted
+=head2 services_from_args(%param)
+
+Given a list of arguments (typically from the console commands)
+returns a list of L<ControlFreak::Service> instances. 
+
+=over 4
+
+=item * args
+
+The list of arguments to analyze.
+
+=item * err
+
+A callback called with the parsing errors of the arguments.
+
+=back
+
+=cut
+
 sub services_from_args {
     my $ctrl = shift;
-    my $svcname = shift;
-    return grep { defined $_ } ($ctrl->{servicemap}{$svcname});
+    my %param = @_;
+
+    my $err  = _CODE($param{err_cb}) || sub {};
+    my $args = _ARRAY($param{args})
+        or return ();
+
+    my $selector = shift @$args;
+    if ($selector eq 'service') {
+        unless (scalar @$args == 1) {
+            $err->('service selector takes exactly 1 argument: name');
+            return ();
+        }
+        my $name = shift @$args;
+        my $svc = $ctrl->service($name);
+        return $svc ? ($svc) : ();
+    }
+    elsif ($selector eq 'tag') {
+        $err->("tags aren't supported yet");
+    }
+    elsif ($selector eq 'all') {
+        return $ctrl->services;
+    }
+    else {
+        $err->("unknown selector '$selector'");
+    }
+    return ();
 }
+
 sub command_list {
     my $ctrl = shift;
-    my @svcs = values %{$ctrl->{servicemap}};
+    my @svcs = $ctrl->services;
     for (@svcs) {
         print $_->text_status . "\n";
     }
