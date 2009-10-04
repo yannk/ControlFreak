@@ -5,8 +5,9 @@ use warnings;
 use ControlFreak::Service;
 use ControlFreak::Console;
 use ControlFreak::Socket;
+use AnyEvent::Socket();
 use JSON::Any;
-use Params::Util qw{ _IDENTIFIER };
+use Params::Util qw{ _STRING };
 
 =encoding utf-8
 
@@ -77,6 +78,60 @@ sub process {
     return $h->( $class, %param, cmd => $rest );
 }
 
+sub process_console {
+    my $class = shift;
+    my %param = @_;
+
+    my $cmd  = $param{cmd};
+    my $ok   = $param{ok_cb} || sub {};
+    my $err  = $param{err_cb} || sub {};
+    my $ctrl = $param{ctrl};
+
+    my $console = $ctrl->console;
+    return $err->("there is a console already")
+        if $console && $console->started;
+
+    unless ($console) {
+        $console = ControlFreak::Console->new(ctrl => $ctrl);
+    }
+
+    return $err->("not authorized")
+        unless $param{has_priv};
+
+    my ($attr, $assignment);
+    if ($cmd =~ /^([\w-]+)\s*=\s*(\S+)$/) {
+        $attr       = $1;
+        $assignment = $2 || "";
+    }
+    else {
+        return $err->("malformed console command '$cmd'");
+    }
+
+    my $success = 1;
+    if ($attr eq 'address') {
+        my $addr = $assignment;
+        $addr =~ s/\s//g if $addr;
+        return $err->("invalid address: '$assignment'") unless $addr;
+        my ($host, $service) =
+            AnyEvent::Socket::parse_hostport($addr, '8888');
+
+        return $err->("cannot parse address '$assignment'") unless $host;
+        $console->{host} = $host;
+        $console->{service} = $service;
+        $success = 1;
+    }
+    if ($attr eq 'full') {
+        my $value = _STRING($assignment)
+            or return $err->("invalid value for console.full");
+        return $err->("incorrect boolean for console.full")
+            unless defined ($value = _as_bool($value));
+        $console->{full} = $value;
+    }
+
+    return $ok->() if $success;
+    return $err->("unknown console attribute: '$attr'");
+}
+
 sub process_service {
     my $class = shift;
     my %param = @_;
@@ -91,21 +146,21 @@ sub process_service {
 
     return $err->("empty service command") unless $cmd;
 
-    my ($svcname, $attr, $assignement);
+    my ($svcname, $attr, $assignment);
     if ($cmd =~ /^([\w-]+)\s+([\w-]+)\s*=(.*)$/) {
         $svcname     = $1;
         $attr        = $2;
-        $assignement = $3;
+        $assignment  = $3;
     }
     else {
-        return $err->("malformed service command $cmd");
+        return $err->("malformed service command '$cmd'");
     }
 
     my $svc = $ctrl->find_or_create_svc($svcname)
         or return $err->("service name is invalid");
 
     ## Clean the value, before assigning it
-    my $value = $assignement;
+    my $value = $assignment;
     $value =~ s/^\s+//;
     if (defined $value && ! length $value) {
         $value = undef;
@@ -132,6 +187,13 @@ sub process_service {
     }
 
     return $success ? $ok->() : $err->("invalid value");
+}
+
+sub _as_bool {
+    return 1 if /^1| true| on| enabled|yes/xi;
+    return 0 if /^0|false|off|disabled| no/xi;
+    return;
+
 }
 
 "cd&c";

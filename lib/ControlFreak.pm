@@ -10,7 +10,11 @@ use Object::Tiny qw{
     logger
 };
 
+use Carp;
+use Log::Log4perl ':easy';
+Log::Log4perl->easy_init($DEBUG);
 use ControlFreak::Service;
+use ControlFreak::Command;
 
 =encoding utf-8
 
@@ -102,10 +106,49 @@ The absolute path to a initial config file.
 
 sub new {
     my $ctrl = shift->SUPER::new(@_);
+
     $ctrl->{servicemap} = {};
     $ctrl->{socketmap}  = {};
 
     return $ctrl;
+}
+
+=head2 load_config
+
+This should only be called once when the controller is created,
+it loads the initial configuration from disk and for that reason
+it's done with special privileges.
+
+=cut
+
+sub load_config {
+    my $ctrl = shift;
+    my $cfg_file = $ctrl->config_file;
+
+    my $cfg;
+    unless (open $cfg, "<", $cfg_file) {
+        ERROR "Configuration cannot be loaded: $!";
+        croak "Error loading config: $!";
+    }
+    while (<$cfg>) {
+        chomp;
+        s/^\s+//;s/\s+$//;
+        next unless $_;
+        ControlFreak::Command->process(
+            ctrl => $ctrl,
+            ok_cb => sub {
+                ## if really verbose we could echo to logs
+            },
+            err_cb => sub {
+                my $error = shift;
+                ERROR("Error in config:\n error: $error\n in: $_");
+                croak("Fatal error: config is invalid");
+            },
+            has_priv => 1, ## Always for initial config file
+            cmd => $_,
+        );
+    }
+    return 1;
 }
 
 =head2 services

@@ -4,12 +4,14 @@ use warnings;
 
 use Find::Lib './lib';
 use Getopt::Long;
+use AnyEvent();
 use Log::Log4perl qw/:easy/;
 Log::Log4perl->easy_init($DEBUG);
 
 use ControlFreak;
 use Carp;
 use Pod::Usage;
+use Try::Tiny;
 
 my %options;
 GetOptions(
@@ -27,14 +29,21 @@ pod2usage("please provide a config file") unless $options{config};
 
 croak "Config file doesn't exist" unless -e $options{config};
 croak "Can't read config file"    unless -r $options{config};
-open my $cfg, "<", $options{config} or croak "Error reading config: $!";
-my $init_config = do { local $/; <$cfg> };
 
-=cut
-my $cf = ControlFreak->new( config => $cfg );
-$cf->init_config;
-$cf->run;
-=cut
+my $ctrl = ControlFreak->new( config_file => $options{config} );
+
+#try {
+    $ctrl->load_config;
+#} catch {
+#    die "Fatal error while loading the config, see logs for details $!";
+#};
+
+if ($ctrl->console) {
+    $ctrl->console->start;
+}
+
+## probably need to deal with signals
+AnyEvent->condvar->recv;
 
 __END__
 
@@ -67,7 +76,7 @@ services.
 =head1 SAMPLE CONFIG
 
   # management port
-  console address 127.0.0.1:11311
+  console address = 127.0.0.1:11311
   console full = on # enable this only if you know what you are doing
 
   logger config = /etc/cfk/logger.conf

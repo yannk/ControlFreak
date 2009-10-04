@@ -11,6 +11,7 @@ use Object::Tiny qw{
     host
     service
     full
+    started
 };
 
 sub new {
@@ -19,6 +20,7 @@ sub new {
     $console->{ctrl} = $param{ctrl}
         or croak "Console requires a controller";
     $param{ctrl}->set_console($console);
+    $console->{started} = 0;
     return $console;
 }
 
@@ -77,6 +79,7 @@ sub start {
         return 0;
     };
 
+    $console->{started} = 1;
     my $host = $console->host;
     my $service = $console->service;
     my $guard = tcp_server $host, $service, $accept_cb, $prepare_cb;

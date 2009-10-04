@@ -91,3 +91,12 @@ sub process_ok {
     process_ok(has_priv => 1, cmd => "service somesvc cmd=[\"a\", \"b\"]");
     is_deeply $svc->cmd, ['a', 'b'];
 }
+
+## console
+{
+    ok !$ctrl->console, "no console yet";
+    process_ok(has_priv => 1, cmd => "console address = 127.0.0.1:0");
+    ok  my $con = $ctrl->console, "console is now set";
+    like_error qr/console already/,
+               has_priv => 1, cmd => "console address = 127.0.0.1:0";
+}
