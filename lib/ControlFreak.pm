@@ -17,6 +17,8 @@ use ControlFreak::Service;
 use ControlFreak::Command;
 use Params::Util qw{ _ARRAY _CODE };
 
+our $CRLF = "\015\012";
+
 =encoding utf-8
 
 =head1 NAME
@@ -300,10 +302,31 @@ sub services_from_args {
 
 sub command_list {
     my $ctrl = shift;
+    my %param = @_;
+    my $ok = _CODE($param{ok_cb}) || sub {};
+    my @out = map { $_->name } $ctrl->services;
+    $ok->(join "\n", @out);
+}
+
+sub command_desc {
+    my $ctrl = shift;
+    my %param = @_;
+    my $ok = _CODE($param{ok_cb}) || sub {};
+    my @out = map { $_->desc_as_text } $ctrl->services;
+    $ok->(join "\n", @out);
+}
+
+sub command_status {
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $ok = _CODE($param{ok_cb}) || sub {};
     my @svcs = $ctrl->services;
+    my @out;
     for (@svcs) {
-        print $_->text_status . "\n";
+        push @out, $_->status_as_text;
     }
+    $ok->(join "\n", @out);
 }
 
 =head1 AUTHOR

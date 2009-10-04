@@ -359,9 +359,55 @@ sub restart {
     die "snif";
 }
 
-sub text_status {
+=head2 status_as_text
+
+Return a text describing the service state.
+It consists in tab separated list of fields:
+
+=over 2
+
+=item * name
+
+=item * state
+
+=item * pid
+
+=item * start_time
+
+=item * stop_time
+
+=item * fail_reason
+
+=back
+
+=cut
+
+sub status_as_text {
     my $svc = shift;
-    return join " ", map { $svc->$_ } qw/state name start_time stop_time fail_reason/;
+    return join "\t", map { $svc->$_ || "" }
+           qw/name state pid start_time stop_time fail_reason/;
+}
+
+=head2 desc_as_text
+
+Return a text describing the service and how to access it.
+It consists in tab separated list of fields:
+
+=over 2
+
+=item * name
+
+=item * tags
+
+=item * desc
+
+=back
+
+=cut
+sub desc_as_text {
+    my $svc = shift;
+    return join "\t", map { $svc->$_ || "" }
+           qw/name tags desc/;
 }
 
 sub _set {
