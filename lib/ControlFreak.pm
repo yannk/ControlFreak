@@ -131,10 +131,14 @@ sub load_config {
         ERROR "Configuration cannot be loaded: $!";
         croak "Error loading config: $!";
     }
-    while (<$cfg>) {
+    my @lines = <$cfg>;
+    close $cfg;
+
+    while (defined($_ = shift @lines)) {
         chomp;
         s/^\s+//;s/\s+$//;
-        next unless $_;
+        my $line = $_;
+        next unless $line;
         ControlFreak::Command->process(
             ctrl => $ctrl,
             ok_cb => sub {
@@ -142,11 +146,11 @@ sub load_config {
             },
             err_cb => sub {
                 my $error = shift;
-                ERROR("Error in config:\n error: $error\n in: $_");
+                ERROR("Error in config:\n error: $error\n in: $line");
                 croak("Fatal error: config is invalid");
             },
             has_priv => 1, ## Always for initial config file
-            cmd => $_,
+            cmd => $line,
         );
     }
     return 1;
