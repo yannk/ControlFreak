@@ -8,8 +8,8 @@ use AnyEvent '5.202';
 use AnyEvent::Util();
 use AnyEvent::Handle();
 use Carp;
-use Params::Util qw{ _NUMBER _STRING _IDENTIFIER };
-use POSIX();
+use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY };
+use POSIX 'SIGTERM';
 
 use constant DEFAULT_START_SECS => 1;
 
@@ -190,14 +190,20 @@ Returns the reason of the failure, or undef.
 sub fail_reason {
     my $svc = shift;
     return unless $svc->is_fail;
-    my $status = $svc->{fail_status};
-    return unless POSIX::WIFEXITED($status);
+    my $status = $svc->{exit_status};
+
     my $exit_status = POSIX::WEXITSTATUS($status);
     my $signal      = POSIX::WTERMSIG($status);
 
-    my $reason = "Exited with $exit_status";
-    $reason .= "; received $signal" if POSIX::WIFSIGNALED($status);
-    return $reason;
+    my ($exit, $sig);
+    if (POSIX::WIFEXITED($status)) {
+        $exit = $exit_status
+              ? "Exited with error $exit_status"
+              : "Exited successfuly";
+    }
+
+    $sig = "Received signal $signal" if POSIX::WIFSIGNALED($status);
+    return join " - ", grep { $_ } ($exit, $sig);
 }
 
 =head2 stop(%param)
@@ -360,7 +366,11 @@ sub _set {
 
     my $v = defined $value ? $value : "~";
     if ($old) {
-        INFO "Changing $attr from '$old' to '$v'";
+        my $oldv = join ", ", @$old if ref $old;
+        $v = join ", ", @$v if ref $v;
+
+        #INFO "Changing $attr from '$old' to '$v'";
+        INFO "Changing $attr from '$oldv' to '$v'";
     }
     else {
         INFO "Setting $attr to '$v'";
@@ -377,7 +387,7 @@ sub unset {
 }
 
 sub set_cmd {
-    my $value = _STRING($_[1]) or return;
+    my $value = (ref $_[1] ? _ARRAY($_[1]) : _STRING($_[1])) or return;
     shift->_set('cmd', $value);
 }
 
@@ -411,7 +421,6 @@ sub _run_cmd {
             $stds{"2>"} = $logger->svc_watcher(err => $svc->name);
         }
     }
-
     $svc->{child_cv} = AnyEvent::Util::run_cmd(
         $svc->cmd,
         close_all => 1,
@@ -420,20 +429,24 @@ sub _run_cmd {
         %stds,
     );
     $svc->{child_cv}->cb( sub {
-        my $status = shift()->recv;
+        my $es = shift()->recv;
+        $svc->{child_cv} = undef;
+        $svc->{pid} = undef;
         my $state;
-        if (POSIX::WIFEXITED($status) && !POSIX::WEXITSTATUS($status)) {
+        if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
             INFO "child exited";
             $state = "stopped";
         }
+        elsif (POSIX::WIFSIGNALED($es) && POSIX::WTERMSIG($es) == SIGTERM) {
+            INFO "child gracefully killed";
+            $state = "stopped";
+        }
         else {
-            ERROR "child terminated abnormally $status";
-            $svc->{fail_status} = $status;
+            ERROR "child terminated abnormally $es";
+            $svc->{exit_status} = $es;
             $state = "fail";
         }
         $svc->{state} = $state;
-        $svc->{child_cv} = undef;
-        $svc->{pid} = undef;
     });
     return 1;
 }

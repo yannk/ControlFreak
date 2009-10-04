@@ -1,10 +1,9 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 57;
+use Test::More tests => 74;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
-use Test::FindFreePort;
 use Time::HiRes qw/gettimeofday tv_interval/;
 
 use_ok 'ControlFreak::Console';
@@ -121,7 +120,7 @@ use_ok 'ControlFreak::Console';
     ok !$svc->start_time;
     ok !$svc->pid;
 
-    $svc->set_cmd(q/perl -e 'die "oh noes"'/);
+    $svc->set_cmd([ 'perl', '-e', 'die "oh noes"' ]);
     $svc->start;
     ok $svc->pid, "got a pid";
     ok $svc->is_starting, "is starting (well supposedly)";
@@ -131,20 +130,39 @@ use_ok 'ControlFreak::Console';
     like $svc->fail_reason, qr/255/, "exit code";
     unlike $svc->fail_reason, qr/signal/, "no signal";
 
-    $svc->set_cmd(q/perl -e 'kill 9, $$;'/);
+    $svc->set_cmd(['perl', '-e', 'kill 9, $$']);
     $svc->start;
     ok wait_for_fail($svc, 2);
-    like $svc->fail_reason, qr/Exited with \d/, "exit code";
-    like $svc->fail_reason, qr/signal 9/, "no signal";
+    unlike $svc->fail_reason, qr/Exited/, "no exit code";
+    like $svc->fail_reason, qr/signal 9/, "killed";
 
-    $svc->set_cmd(q/perl -e 'sleep 100'/);
+    ## let's kill the process abruptly
+    $svc->set_cmd(['perl', '-e', 'sleep 100']);
     $svc->start;
-    ok wait_for_fail($svc, 100);
-    like $svc->fail_reason, qr/signal 9/, "no signal";
+    ok wait_for_starting($svc);
+    ok $svc->is_starting, "now starting, let's proceed with the killings";
+    kill 9, $svc->pid;
+    ok wait_for_fail($svc);
+    ok $svc->is_down, "got killed";
+    ok $svc->is_fail, "fail";
+    unlike $svc->fail_reason, qr/Exited with error/, "no exit code";
+    like $svc->fail_reason, qr/signal 9/, "killed";
+
+    ## now kill it properly
+    $svc->start;
+    ok wait_for_starting($svc);
+    ok $svc->is_starting, "now starting, let's proceed with the killings";
+    kill 15, $svc->pid;
+    ok wait_for_down($svc);
+    ok $svc->is_down, "got killed";
+    ok !$svc->is_fail, "not fail";
+    ok $svc->is_stopped, "is stopped";
+    ok !$svc->fail_reason, "no fail reason, since we succeeded";
 }
 
-sub wait_for_down { wait_for_status('is_down', @_) }
-sub wait_for_fail { wait_for_status('is_fail', @_) }
+sub wait_for_starting { wait_for_status('is_starting', @_) }
+sub wait_for_down     { wait_for_status('is_down', @_) }
+sub wait_for_fail     { wait_for_status('is_fail', @_) }
 
 sub wait_for_status {
     my $cond = shift;
