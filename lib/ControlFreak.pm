@@ -283,7 +283,14 @@ All accessible commands to the config and the console.
 
 =cut
 
-sub command_start {
+sub command_start   { _command_ctrl('start',   @_ ) }
+sub command_stop    { _command_ctrl('stop',    @_ ) }
+sub command_restart { _command_ctrl('restart', @_ ) }
+sub command_down    { _command_ctrl('down',    @_ ) }
+sub command_up      { _command_ctrl('up',      @_ ) }
+
+sub _command_ctrl {
+    my $meth = shift;
     my $ctrl = shift;
     my %param = @_;
 
@@ -297,9 +304,9 @@ sub command_start {
     }
     my $n = 0;
     for (@svcs) {
-        $_->start(err_cb => $err, ok_cb => sub { $n++ });
+        $_->$meth(err_cb => $err, ok_cb => sub { $n++ });
     }
-    $ok->("started $n");
+    $ok->("done $n");
     return;
 }
 
