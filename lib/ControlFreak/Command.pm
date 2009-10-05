@@ -59,14 +59,21 @@ sub process {
     my $ok  = $param{ok_cb}  || sub {};
     my $err = $param{err_cb} || sub {};
 
-    return $err->("empty command") unless $cmd;
+    if ($cmd) {
+        ## clean
+        $cmd =~ s/\#.*//;  # comments
+        $cmd =~ s/^\s+//;  # leading whitespaces
+        $cmd =~ s/\s+$//;  # trailing whitespaces
+    }
 
-    ## clean
-    $cmd =~ s/\#.*//;  # comments
-    $cmd =~ s/^\s+//;  # leading whitespaces
-    $cmd =~ s/\s+$//;  # trailing whitespaces
-
-    return $err->("command is void") unless $cmd;
+    if (! $cmd) {
+        if ($param{ignore_void}) {
+            return;
+        }
+        else {
+            return $err->("command is void");
+        }
+    }
 
     my ($kw, $rest) = split /\s+/, $cmd, 2;
 
@@ -328,6 +335,7 @@ sub from_file {
     my $fatal_errors = $param{fatal_errors};
     my $wrap_err = $fatal_errors ? sub {
         my $data = shift;
+
         $err->($data);
         croak $data || "error";
     } : $err;
@@ -350,7 +358,7 @@ sub from_file {
         my $error = shift;
         $errors++;
         $error = "line $line_number: $error";
-        $err->($error);
+        $wrap_err->($error);
     };
 
     for my $line (@logger_lines) {
@@ -371,11 +379,12 @@ sub from_file {
         my $line = $_;
         next unless $line;
         $class->process(
-            cmd      => $line,
-            ctrl     => $ctrl,
-            ok_cb    => sub {},
-            err_cb   => $err_with_line,
-            has_priv => $param{has_priv},
+            cmd         => $line,
+            ctrl        => $ctrl,
+            ok_cb       => sub {},
+            err_cb      => $err_with_line,
+            has_priv    => $param{has_priv},
+            ignore_void => 1,
         );
     }
     $ok->() unless $errors;
