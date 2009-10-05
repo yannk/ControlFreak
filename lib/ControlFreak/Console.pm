@@ -2,8 +2,6 @@ package ControlFreak::Console;
 use strict;
 use warnings;
 
-use Log::Log4perl qw/:easy/;
-Log::Log4perl->easy_init($DEBUG);
 use Carp;
 use AnyEvent::Socket();
 use AnyEvent::Handle();

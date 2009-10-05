@@ -2,8 +2,6 @@ package ControlFreak::Service;
 use strict;
 use warnings;
 
-use Log::Log4perl qw/:easy/;
-Log::Log4perl->easy_init($DEBUG);
 use AnyEvent '5.202';
 use AnyEvent::Util();
 use AnyEvent::Handle();
@@ -322,7 +320,7 @@ sub _check_running_state {
     my $svc = shift;
     my $state = $svc->state;
     return unless $state && $state eq 'starting';
-    DEBUG "Now setting the service as running";
+    $svc->{ctrl}->log->debug("Now setting the service as running");
     $svc->{state} = 'running';
     $svc->{start_cv} = undef;
 }

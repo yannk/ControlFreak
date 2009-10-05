@@ -32,7 +32,10 @@ sub default_config {
 EOFC
 }
 
-sub log_handle { Log::Log4perl->get_logger(@_) }
+sub log_handle {
+    my $logger = shift;
+    Log::Log4perl->get_logger(@_);
+}
 
 sub svc_watcher {
     my $logger = shift;
