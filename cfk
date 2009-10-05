@@ -77,6 +77,7 @@ services.
   console address = 127.0.0.1:11311
   console full = on # enable this only if you know what you are doing
 
+  ## log configuration
   logger config = /etc/cfk/logger.conf
 
   service memcached cmd = /usr/bin/memcached -p 11211
@@ -87,7 +88,8 @@ services.
   service perlbal cmd = /usr/bin/perlbal -c /etc/perlbal.conf
   service perlbal tags = prod
 
-  socket fcgisock address = "127.0.0.1:8080"
+  ## TODO
+  socket fcgisock address = 127.0.0.1:8080
   socket fcgisock options = TBD
 
   ## webNNN share a common socket through their stdin
@@ -102,6 +104,78 @@ services.
   # start random stuff
   command up svc memcached
   command up svc perlbal
+  ## TODO
   command down tag optional
 
+  ## TODO
   load /etc/cfk.d/*.conf
+
+=head1 SAMPLE LOG CONFIG
+
+B<ControlFreak> currently works with L<Log::Log4perl> framework which is
+is incredibly flexible. You might have to install additional modules to get the
+most of your logging experience (let's say if you want to be notified by
+Instant Message of services going down).
+
+There are two categories of logger:
+
+=over 4
+
+=item the main logger
+
+This is the logger used by B<ControlFreak> itself, it allows to finely control
+what do you want to log from what's happening in the daemon.
+
+=item the service logger
+
+This is a serie of loggers used by the different services. All services will
+get by default their C<stdout> and C<stderr> aggregated and logged, unless
+you specify the C<ignore_stderr> and C<ignore_stdout> options.
+
+Each log event gets assigned the following log category:
+
+  service.$service_name.$type
+
+Where C<$service_name> is the name of your service ("worker001", "perlbal")
+and $type is either C<err> or C<out>.
+
+Obviously messages going to C<stderr> will be logged at level C<ERROR> while
+messages on C<stdout> will be logged at C<INFO> level.
+
+So there is a bit of redundancy in there but, this is what gets you the most
+flexibility with log4perl.
+
+=back
+
+=head2 sample 1
+
+    # daemon log to the main log
+    log4perl.rootLogger=DEBUG, LOGFILE
+
+    # all services to service logs...
+    log4perl.logger.service=DEBUG, SVCFILE
+    log4perl.additivity.service = 0
+
+    # ...but gearman errors are also going to the screen
+    log4perl.logger.service.gearmand=ERROR, SCREEN
+
+    log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
+    log4perl.appender.SCREEN.layout=PatternLayout
+    log4perl.appender.SCREEN.layout.ConversionPattern=[gearman] %p %c - %m%n
+
+    log4perl.appender.LOGFILE=Log::Log4perl::Appender::File
+    log4perl.appender.LOGFILE.filename=/tmp/main.log
+    log4perl.appender.LOGFILE.mode=append
+    log4perl.appender.LOGFILE.layout=PatternLayout
+    log4perl.appender.LOGFILE.layout.ConversionPattern=[%r] %p %L %c - %m%n
+
+    log4perl.appender.SVCFILE=Log::Log4perl::Appender::File
+    log4perl.appender.SVCFILE.filename=/tmp/services.log
+    log4perl.appender.SVCFILE.mode=append
+    log4perl.appender.SVCFILE.layout=PatternLayout
+    log4perl.appender.SVCFILE.layout.ConversionPattern=[%r] %p %L %c - %m%n
+
+=head2 sample 2
+
+
+=cut
