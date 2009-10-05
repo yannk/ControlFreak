@@ -218,7 +218,7 @@ sub process_command {
     my $meth = "command_$command";
     my $h = $ctrl->can($meth);
     return $err->("unknown command '$command'") unless $h;
-    $h->($ctrl, args => \@args, err_cb => $err, ok_cb => $ok);
+    $h->($ctrl, args => \@args, %param, err_cb => $err, ok_cb => $ok);
     return;
 }
 
@@ -379,12 +379,13 @@ sub from_file {
         my $line = $_;
         next unless $line;
         $class->process(
-            cmd         => $line,
-            ctrl        => $ctrl,
-            ok_cb       => sub {},
-            err_cb      => $err_with_line,
-            has_priv    => $param{has_priv},
-            ignore_void => 1,
+            cmd           => $line,
+            ctrl          => $ctrl,
+            ok_cb         => sub {},
+            err_cb        => $err_with_line,
+            has_priv      => $param{has_priv},
+            ignore_void   => 1,
+            ignore_reload => 1,
         );
     }
     $ok->() unless $errors;

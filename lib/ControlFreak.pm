@@ -325,6 +325,9 @@ sub command_reload_config {
     my $ctrl  = shift;
     my %param = @_;
 
+    ## avoid recursion
+    return if $param{ignore_reload};
+
     $ctrl->log->info("Reloading initial config file");
     my $errors = 0;
     return ControlFreak::Command->from_file(
