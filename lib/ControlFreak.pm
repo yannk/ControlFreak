@@ -6,15 +6,14 @@ our $VERSION = '0.01';
 
 use Object::Tiny qw{
     config_file
+    log
     console
-    logger
 };
 
 use Carp;
-use Log::Log4perl ':easy';
-Log::Log4perl->easy_init($DEBUG);
-use ControlFreak::Service;
 use ControlFreak::Command;
+use ControlFreak::Logger;
+use ControlFreak::Service;
 use Params::Util qw{ _ARRAY _CODE };
 
 our $CRLF = "\015\012";
@@ -108,10 +107,16 @@ The absolute path to a initial config file.
 =cut
 
 sub new {
-    my $ctrl = shift->SUPER::new(@_);
+    my $class = shift;
+    my %param = @_;
+    my $ctrl = $class->SUPER::new(%param);
 
     $ctrl->{servicemap} = {};
     $ctrl->{socketmap}  = {};
+
+    $ctrl->{log} = ControlFreak::Logger->new(
+        config_file => $param{log_config_file},
+    );
 
     return $ctrl;
 }
@@ -316,11 +321,11 @@ sub command_status {
 }
 
 ## reload initial configuration
-sub command_reload {
+sub command_reload_config {
     my $ctrl  = shift;
     my %param = @_;
 
-    INFO("Reloading initial config file");
+    $ctrl->log->info("Reloading initial config file");
     my $errors = 0;
     return ControlFreak::Command->from_file(
         %param,

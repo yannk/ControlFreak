@@ -71,13 +71,13 @@ sub start {
 
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
-        INFO "new connection to admin from $host:$port";
+        $ctrl->log->info("new connection to admin from $host:$port");
         $console->accept_connection($fh, $host, $port);
     };
 
     my $prepare_cb = sub {
         my ($fh, $host, $port) = @_;
-        INFO "Admin interface started on $host:$port";
+        $ctrl->log->info("Admin interface started on $host:$port");
         $param{prepare_cb}->(@_) if $param{prepare_cb};
         return 0;
     };
@@ -98,11 +98,11 @@ sub accept_connection {
     my $hdl; $hdl = AnyEvent::Handle->new(
         fh       => $fh,
         on_eof   => sub {
-            INFO "client connection: eof";
+            $console->ctrl->log->info("client connection: eof");
             $hdl->destroy;
         },
         on_error => sub {
-            ERROR "Client connection error: $!";
+            $console->ctrl->log->error("Client connection error: $!");
         },
     );
     $console->{handles}{$hdl} = $hdl;
@@ -110,7 +110,7 @@ sub accept_connection {
     my $get_admin_cmd; $get_admin_cmd = sub {
         my ($h, $line) = @_;
         if (lc $line eq 'exit') {
-            INFO "exiting";
+            $console->ctrl->log->info( "exiting" );
             $h->on_drain(sub {
                 delete $console->{handles}{$h};
                 $h->destroy;

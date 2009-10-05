@@ -427,10 +427,10 @@ sub _set {
     if ($old) {
         my $oldv = defined $old ? $old : "~";
         $oldv = Data::Dumper::Dumper($oldv) if ref $oldv;
-        INFO "Changing $attr from '$oldv' to '$v'";
+        $svc->{ctrl}->log->debug( "Changing $attr from '$oldv' to '$v'" );
     }
     else {
-        INFO "Setting $attr to '$v'";
+        $svc->{ctrl}->log->debug( "Setting $attr to '$v'" );
     }
     $svc->{$attr} = $value;
     return 1;
@@ -499,7 +499,7 @@ sub set_ignore_stdout {
 sub _run_cmd {
     my $svc = shift;
     my $ctrl = $svc->{ctrl};
-    INFO sprintf "starting %s", $svc->name;
+    $ctrl->log->info( sprintf "starting %s", $svc->name );
 
     my %stds = (
         "<"  => "/dev/null",
@@ -534,15 +534,15 @@ sub _run_cmd {
         $svc->{pid} = undef;
         my $state;
         if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
-            INFO "child exited";
+            $svc->{ctrl}->log->info("child exited");
             $state = "stopped";
         }
         elsif (POSIX::WIFSIGNALED($es) && POSIX::WTERMSIG($es) == SIGTERM) {
-            INFO "child gracefully killed";
+            $svc->{ctrl}->log->info("child gracefully killed");
             $state = "stopped";
         }
         else {
-            ERROR "child terminated abnormally $es";
+            $svc->{ctrl}->log->error("child terminated abnormally $es");
             $svc->{exit_status} = $es;
             $state = "fail";
         }
