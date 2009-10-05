@@ -126,36 +126,12 @@ it's done with special privileges.
 
 sub load_config {
     my $ctrl = shift;
-    my $cfg_file = $ctrl->config_file;
-
-    my $cfg;
-    unless (open $cfg, "<", $cfg_file) {
-        ERROR "Configuration cannot be loaded: $!";
-        croak "Error loading config: $!";
-    }
-    my @lines = <$cfg>;
-    close $cfg;
-
-    while (defined($_ = shift @lines)) {
-        chomp;
-        s/^\s+//;s/\s+$//;
-        my $line = $_;
-        next unless $line;
-        ControlFreak::Command->process(
-            ctrl => $ctrl,
-            ok_cb => sub {
-                ## if really verbose we could echo to logs
-            },
-            err_cb => sub {
-                my $error = shift;
-                ERROR("Error in config:\n error: $error\n in: $line");
-                croak("Fatal error: config is invalid");
-            },
-            has_priv => 1, ## Always for initial config file
-            cmd => $line,
-        );
-    }
-    return 1;
+    return ControlFreak::Command->from_file(
+        ctrl         => $ctrl,
+        file         => $ctrl->config_file,
+        has_priv     => 1,
+        fatal_errors => 1,
+    );
 }
 
 =head2 services
@@ -337,6 +313,24 @@ sub command_status {
         push @out, $_->status_as_text;
     }
     $ok->(join "\n", @out);
+}
+
+## reload initial configuration
+sub command_reload {
+    my $ctrl  = shift;
+    my %param = @_;
+
+    INFO("Reloading initial config file");
+    my $errors = 0;
+    return ControlFreak::Command->from_file(
+        %param,
+        ctrl         => $ctrl,
+        file         => $ctrl->config_file,
+        has_priv     => $ctrl->console->full,
+        fatal_errors => 0,
+        skip_console => 1,
+    );
+    return;
 }
 
 =head1 AUTHOR

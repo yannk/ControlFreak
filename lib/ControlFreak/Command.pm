@@ -7,7 +7,8 @@ use ControlFreak::Console;
 use ControlFreak::Socket;
 use AnyEvent::Socket();
 use JSON::Any;
-use Params::Util qw{ _STRING };
+use Params::Util qw{ _STRING _INSTANCE _CODE };
+use Carp;
 
 =encoding utf-8
 
@@ -220,6 +221,105 @@ sub _as_bool {
     return 0 if $value =~ /^0|false|off|disabled| no/xi;
     return;
 
+}
+
+
+=head2 from_file(%param)
+
+B<from_file> can be called with a number of of parameters:
+
+=over 4
+
+=item * ctrl
+
+The controller. C<from_file> will croak if not passed.
+
+=item * file
+
+The file path.
+
+=item * fatal_errors
+
+A scalar evaluated in a boolean context that determines if errors
+while processing the files are fatals or not.
+
+A true value is designed to be used only at startup time.
+
+=item * has_priv
+
+The flag to pass to C<ControlFreak::Command> to indicate
+the commands can be executed without restrictions.
+
+=item * err_cb
+
+The error callback as usual
+
+=item * ok_cb
+
+The ok callback as usual
+
+=item * skip_console
+
+A flag indicating that console commands should be ignored from
+the file.
+
+=back
+
+=cut
+
+sub from_file {
+    my $class = shift;
+    my %param = @_;
+
+    my $ctrl = _INSTANCE($param{ctrl}, "ControlFreak")
+        or croak "ctrl param missing";
+
+    my $ok  = _CODE($param{ok_cb})  || sub {};
+    my $err = _CODE($param{err_cb}) || sub {};
+
+    my $fatal_errors = $param{fatal_errors};
+    my $wrap_err = $fatal_errors ? sub {
+        my $data = shift;
+        $err->($data);
+        croak $data || "error";
+    } : $err;
+
+    my $cfg_file = _STRING($param{file})
+        or $wrap_err->("invalid file");
+
+    my $cfg;
+    unless (open $cfg, "<", $cfg_file) {
+        $wrap_err->("Error loading config: $!");
+        return;
+    }
+    my @lines = <$cfg>;
+    close $cfg;
+
+    my $line_number = 0;
+    my $errors = 0;
+    my $err_with_line = sub {
+        my $error = shift;
+        $errors++;
+        $error = "line $line_number: $error";
+        $err->($error);
+    };
+    while (defined($_ = shift @lines)) {
+        $line_number++;
+        chomp;
+        s/^\s+//;s/\s+$//;
+        next if $param{skip_console} && /^console/;
+        my $line = $_;
+        next unless $line;
+        $class->process(
+            cmd      => $line,
+            ctrl     => $ctrl,
+            ok_cb    => sub {},
+            err_cb   => $err_with_line,
+            has_priv => $param{has_priv},
+        );
+    }
+    $ok->() unless $errors;
+    return 1;
 }
 
 "cd&c";
