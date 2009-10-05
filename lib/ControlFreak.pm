@@ -49,7 +49,7 @@ ControlFreak - a process supervisor
 
     $ctrl->set_console($con);
     $con = $ctrl->console;
-    $log = $ctrl->logger;
+    $log = $ctrl->log;
 
     $ctrl->reload_config;
 

@@ -5,6 +5,7 @@ use warnings;
 use Carp;
 use Log::Log4perl();
 
+use Params::Util qw{ _STRING };
 use Object::Tiny qw{ config_file };
 
 sub new {
@@ -57,6 +58,22 @@ for my $lvl (qw/trace debug info warn error fatal/) {
         local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + 1;
         shift->log_handle->$lvl(@_);
     }
+}
+
+sub set_configfile {
+    my $logger = shift;
+    my $configfile = _STRING(shift)
+        or return;
+    ## reinit
+    Log::Log4perl->init($configfile);
+    return 1;
+}
+
+sub unset {
+    my $logger = shift;
+    my $what = _STRING(shift);
+    return unless $what or $what eq 'configfile';
+    return 1;
 }
 
 =head1 NAME

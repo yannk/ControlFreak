@@ -215,6 +215,53 @@ sub process_command {
     return;
 }
 
+sub process_logger {
+    my $class = shift;
+    my %param = @_;
+
+    ## TBD: not sure if this should require privileges
+    my $cmd  = $param{cmd};
+    my $ok   = $param{ok_cb} || sub {};
+    my $err  = $param{err_cb} || sub {};
+    my $ctrl = $param{ctrl};
+
+    return $err->("empty logger") unless $cmd;
+
+    my ($attr, $assignment);
+    if ($cmd =~ /^([\w-]+)\s*=(.*)$/) {
+        $attr        = $1;
+        $assignment  = $2;
+    }
+    else {
+        return $err->("malformed service command '$cmd'");
+    }
+
+    ## Clean the value, before assigning it
+    my $value = $assignment;
+    $value =~ s/^\s+//;
+    if (defined $value && ! length $value) {
+        $value = undef;
+    }
+    my $logger = $ctrl->log;
+
+    ## attributes existence check
+    my $meth = "set_$attr";
+    my $h = $logger->can($meth);
+    return $err->("invalid property '$attr'")
+        unless $h;
+
+    my $success;
+    if (defined $value) {
+        $success = $h->($logger, $value);
+    }
+    else {
+        $success = $logger->unset($attr);
+    }
+
+    return $success ? $ok->() : $err->("invalid value");
+    return;
+}
+
 sub _as_bool {
     my $value = shift;
     return 1 if $value =~ /^1| true| on| enabled|yes/xi;
@@ -222,7 +269,6 @@ sub _as_bool {
     return;
 
 }
-
 
 =head2 from_file(%param)
 
@@ -265,6 +311,8 @@ the file.
 
 =back
 
+Note, that logger config lines are processed first.
+
 =cut
 
 sub from_file {
@@ -294,6 +342,7 @@ sub from_file {
     }
     my @lines = <$cfg>;
     close $cfg;
+    my @logger_lines = grep { /^\s*logger/ } @lines;
 
     my $line_number = 0;
     my $errors = 0;
@@ -303,11 +352,22 @@ sub from_file {
         $error = "line $line_number: $error";
         $err->($error);
     };
+
+    for my $line (@logger_lines) {
+        $class->process(
+            cmd      => $line,
+            ctrl     => $ctrl,
+            ok_cb    => sub {},
+            err_cb   => $err,
+            has_priv => $param{has_priv},
+        );
+    }
     while (defined($_ = shift @lines)) {
         $line_number++;
         chomp;
         s/^\s+//;s/\s+$//;
         next if $param{skip_console} && /^console/;
+        next if /^logger/;
         my $line = $_;
         next unless $line;
         $class->process(

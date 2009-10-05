@@ -512,7 +512,7 @@ sub _run_cmd {
     ## watcher *won't* get redefined leading to configuration
     ## not being takin into account until restart of the svc.
     ## should we have a watcher reloading function? that will
-    if (my $logger = $ctrl->logger) {
+    if (my $logger = $ctrl->log) {
         ## XXX verify leaks
         unless ($svc->ignore_stdout) {
             $stds{">"} = $logger->svc_watcher(out => $svc->name);

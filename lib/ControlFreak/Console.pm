@@ -68,6 +68,7 @@ sub start {
     my $console = shift;
     my %param   = @_;
     my $ctrl = $console->{ctrl};
+    die "SSSS" unless $ctrl;
 
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
