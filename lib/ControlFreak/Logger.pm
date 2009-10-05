@@ -4,7 +4,6 @@ use warnings;
 
 use Carp;
 use Log::Log4perl();
-use Sub::Uplevel;
 
 use Object::Tiny qw{ config_file };
 
@@ -28,8 +27,7 @@ sub default_config {
     return \<<EOFC
     log4perl.rootLogger=INFO, SCREEN
     log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
-    log4perl.appender.SCREEN.layout=PatternLayout
-    log4perl.appender.SCREEN.layout.ConversionPattern=%m%n
+    log4perl.appender.SCREEN.layout=SimpleLayout
 EOFC
 }
 
@@ -53,15 +51,11 @@ sub svc_watcher {
     return $watcher_cb;
 }
 
-{
+for my $lvl (qw/trace debug info warn error fatal/) {
     no strict 'refs';
-    for my $lvl (qw/trace debug info warn error fatal/) {
-        *$lvl = sub {
-            my $logger = shift;
-            my $handle = $logger->log_handle;
-            my $class  = ref $handle;
-            uplevel 1, \&{"$class\::$lvl"}, @_;
-        };
+    *{$lvl} = sub {
+        local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + 1;
+        shift->log_handle->$lvl(@_);
     }
 }
 
