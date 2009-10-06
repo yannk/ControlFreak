@@ -8,6 +8,12 @@ use Log::Log4perl();
 use Params::Util qw{ _STRING };
 use Object::Tiny qw{ config_file };
 
+our $CURRENT_SVC_PID;
+
+Log::Log4perl::Layout::PatternLayout::add_global_cspec(
+    'S', sub { $ControlFreak::Logger::CURRENT_SVC_PID || "-" },
+);
+
 sub new {
     my $class = shift;
     my $logger = $class->SUPER::new(@_);
@@ -40,7 +46,7 @@ sub log_handle {
 sub svc_watcher {
     my $logger = shift;
     ## type is 'out' our 'err'
-    my ($type, $svcname) = @_;
+    my ($type, $svc) = @_;
 
     ## configurable?
     my $logmethod = $type eq 'err' ? 'error' : 'info';
@@ -48,6 +54,9 @@ sub svc_watcher {
         my $msg = shift;
         return unless defined $msg;
         chomp $msg if $msg;
+        my $svcname = $svc->name;
+        ## for 'S' cspec
+        local $CURRENT_SVC_PID = $svc->pid;
         my $log_handle = $logger->log_handle("service.$svcname.$type");
         $log_handle->$logmethod($msg);
         return;

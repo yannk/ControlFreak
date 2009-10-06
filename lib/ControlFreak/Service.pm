@@ -513,10 +513,10 @@ sub _run_cmd {
     if (my $logger = $ctrl->log) {
         ## XXX verify leaks
         unless ($svc->ignore_stdout) {
-            $stds{">"} = $logger->svc_watcher(out => $svc->name);
+            $stds{">"} = $logger->svc_watcher(out => $svc);
         }
         unless ($svc->ignore_stderr ) {
-            $stds{"2>"} = $logger->svc_watcher(err => $svc->name);
+            $stds{"2>"} = $logger->svc_watcher(err => $svc);
         }
     }
     $svc->{child_cv} = AnyEvent::Util::run_cmd(

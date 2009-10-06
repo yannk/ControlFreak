@@ -147,6 +147,11 @@ flexibility with log4perl.
 
 =back
 
+=head2 Service cspec/placeholder
+
+B<ControlFreak> defines a special cspec C<%S> representing the service
+pid. (only makes sense in the service logger).
+
 =head2 sample 1
 
     # daemon log to the main log
@@ -167,13 +172,14 @@ flexibility with log4perl.
     log4perl.appender.LOGFILE.filename=/tmp/main.log
     log4perl.appender.LOGFILE.mode=append
     log4perl.appender.LOGFILE.layout=PatternLayout
-    log4perl.appender.LOGFILE.layout.ConversionPattern=[%r] %p %L %c - %m%n
+    # %S = service pid
+    log4perl.appender.LOGFILE.layout.ConversionPattern=%S %p %L %c - %m%n
 
     log4perl.appender.SVCFILE=Log::Log4perl::Appender::File
     log4perl.appender.SVCFILE.filename=/tmp/services.log
     log4perl.appender.SVCFILE.mode=append
     log4perl.appender.SVCFILE.layout=PatternLayout
-    log4perl.appender.SVCFILE.layout.ConversionPattern=[%r] %p %L %c - %m%n
+    log4perl.appender.SVCFILE.layout.ConversionPattern=%S %p %L %c - %m%n
 
 =head2 sample 2
 
