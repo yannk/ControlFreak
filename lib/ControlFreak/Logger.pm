@@ -26,6 +26,7 @@ sub new {
     }
     else {
         Log::Log4perl->init( $logger->default_config );
+        $logger->log_handle->info("No explicit log config, using default");
     }
     return $logger;
 }
