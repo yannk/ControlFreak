@@ -5,6 +5,7 @@ use warnings;
 use Carp;
 use AnyEvent::Socket();
 use AnyEvent::Handle();
+use Scalar::Util();
 
 our $CRLF = "\015\12";
 
@@ -20,13 +21,10 @@ sub new {
     my %param = @_;
     $console->{ctrl} = $param{ctrl}
         or croak "Console requires a controller";
-    $param{ctrl}->set_console($console);
+    Scalar::Util::weaken($console->{ctrl});
     $console->{started} = 0;
+    $param{ctrl}->set_console($console);
     return $console;
-}
-
-sub add_handle {
-    my $console = shift;
 }
 
 =head1 NAME
@@ -66,7 +64,6 @@ sub start {
     my $console = shift;
     my %param   = @_;
     my $ctrl = $console->{ctrl};
-    die "SSSS" unless $ctrl;
 
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
@@ -97,11 +94,11 @@ sub accept_connection {
     my $hdl; $hdl = AnyEvent::Handle->new(
         fh       => $fh,
         on_eof   => sub {
-            $console->ctrl->log->info("client connection: eof");
+            $console->{ctrl}->log->info("client connection: eof");
             $hdl->destroy;
         },
         on_error => sub {
-            $console->ctrl->log->error("Client connection error: $!");
+            $console->{ctrl}->log->error("Client connection error: $!");
         },
     );
     $console->{handles}{$hdl} = $hdl;
@@ -109,7 +106,7 @@ sub accept_connection {
     my $get_admin_cmd; $get_admin_cmd = sub {
         my ($h, $line) = @_;
         if (lc $line eq 'exit') {
-            $console->ctrl->log->info( "exiting" );
+            $console->{ctrl}->log->info( "exiting" );
             $h->on_drain(sub {
                 delete $console->{handles}{$h};
                 $h->destroy;

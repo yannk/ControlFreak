@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 74;
+use Test::More tests => 73;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -27,28 +27,20 @@ use_ok 'ControlFreak::Console';
         ctrl => $ctrl,
     );
     is $ctrl->console, $con, "Console assigned";
-    my $port_cv = AE::cv;
 
+    my $cv = AE::cv;
+    my ($host, $port);
     my $g; $g = $con->start(prepare_cb => sub {
-        my ($fh, $host, $port) = @_;
-        $port_cv->send([ $host, $port ]);
-        return;
+        (my $fh, $host, $port) = @_;
     });
 
-    $port_cv->cb( sub {
-        my $conn_info = shift->recv;
-        my $cv = AE::cv;
-        my $clhdl; $clhdl = AnyEvent::Handle->new (
-            connect => $conn_info,
-            on_connect => sub { ok "1", "connected" },
-            on_eof => sub {
-                ok 1, "EOF called";
-                $cv->send;
-            },
-        );
-        $clhdl->push_read(sub { ok "read" });
-        $cv->recv;
-    });
+    my $clhdl; $clhdl = AnyEvent::Handle->new (
+        connect => [$host, $port],
+        on_connect => sub { ok "1", "connected" },
+        on_eof => sub { $cv->send },
+    );
+    $clhdl->push_read(sub { ok 1, "read "; $cv->send });
+    $cv->recv;
 }
 
 ## create our first service, and manipulate it

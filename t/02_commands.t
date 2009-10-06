@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 50;
+use Test::More tests => 51;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -16,7 +16,7 @@ sub process {
     $error = undef;
     $ok = undef;
     ControlFreak::Command->process(
-        ctrl => $ctrl,
+        ctrl   => $ctrl,
         err_cb => sub { $error = shift },
         ok_cb  => sub { $ok = 1; },
         @_
@@ -106,6 +106,7 @@ sub process_ok {
     ok !$ctrl->console, "no console yet";
     process_ok(has_priv => 1, cmd => "console address = 127.0.0.1:0");
     ok  my $con = $ctrl->console, "console is now set";
+    $con->start;
     like_error qr/console already/,
                has_priv => 1, cmd => "console address = 127.0.0.1:0";
 }
