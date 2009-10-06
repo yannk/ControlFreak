@@ -171,7 +171,15 @@ sub process_service {
 
     ## Clean the value, before assigning it
     my $value = $assignment;
-    $value =~ s/^\s+//;
+    if (defined $value) {
+        $value =~ s/^\s+// ;
+
+        ## DWIM with quotes
+        if ($value =~ /^"(.*)"/ or $value =~ /^'(.*)'/) {
+            $value = $1;
+        }
+    }
+
     if (defined $value && ! length $value) {
         $value = undef;
     }
