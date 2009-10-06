@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib '../lib';
-use Test::More tests => 42;
+use Test::More tests => 50;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -37,9 +37,9 @@ sub process_ok {
 
 ## Test some errors
 {
-    like_error qr/empty/, cmd => "";
-    like_error qr/empty/, cmd => undef;
-    like_error qr/empty/;
+    like_error qr/void/, cmd => "";
+    like_error qr/void/, cmd => undef;
+    like_error qr/void/;
     like_error qr/void/, cmd => " ";
     like_error qr/void/, cmd => "\n";
     like_error qr/void/, cmd => "\t";
@@ -68,6 +68,9 @@ sub process_ok {
 
 ## valid commands
 {
+    process ignore_void =>1, cmd => "";
+    ok !$ok && !$error, "just ignored";
+
     ok ! $ctrl->service('somesvc');
     process_ok(has_priv => 1, cmd => "service somesvc cmd = some command");
     ok my $svc = $ctrl->service('somesvc'), "now somesvc has been created";
@@ -86,6 +89,12 @@ sub process_ok {
     is $svc->cmd, undef;
     process_ok(has_priv => 1, cmd => "service somesvc cmd=\n");
     is $svc->cmd, undef;
+
+    process_ok(has_priv => 1, cmd => 'service somesvc cmd="something"');
+    is $svc->cmd, 'something', "DWIM double quotes";
+
+    process_ok(has_priv => 1, cmd => "service somesvc cmd='something'");
+    is $svc->cmd, 'something', "DWIM quotes";
 
     ## json array
     process_ok(has_priv => 1, cmd => "service somesvc cmd=[\"a\", \"b\"]");
