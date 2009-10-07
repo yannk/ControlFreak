@@ -26,6 +26,13 @@ ControlFreak::Socket - Define a (shared) socket controlled by ControlFreak
     $sock->connect(sub { $fh = shift });
     $sock->disconnect;
 
+=head1 DESCRIPTION
+
+Each socket object has a unique name inside B<ControlFreak> controller,
+services interested in a socket just reference it using this name. In such
+situation, the controller pipes the socket to the children after forking,
+and before executing the service.
+
 =head1 AUTHOR
 
 Yann Kerherve <yannk@cpan.org>
