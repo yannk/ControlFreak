@@ -59,6 +59,9 @@ ControlFreak is a process supervisor. It consists in a set of pure
 Perl classes, a controlling process usally running in the background and
 a command line tool to talk to it.
 
+The supervisor/controller process is running in an EventLoop and forks
+to start the services it controls.
+
 It is not a replacement for the init process, init.d etc... The initial goal
 of ControlFreak is to simplify the management of all the processes required
 to run a modern web application. An average web app would use:
