@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 27;
+use Test::More tests => 30;
 require 'testutils.pl';
 use ControlFreak;
 use AnyEvent;
@@ -35,7 +35,7 @@ my $ctrl = ControlFreak->new();
     my $b = $ctrl->find_or_create_svc('b');
     ok $b->respawn_on_fail, "by default we respawn on fail";
     is $b->{backoff_retry}, undef, "no retry yet";
-    $b->set_cmd('sleep .15; exit 255'); # .15 << 1 the default
+    $b->set_cmd('sh -c "sleep .15; exit 255"'); # .15 << 1 the default
     my $max = 3; ## limit the max retries so test don't take forever
     $b->set_respawn_max_retries($max);
     $b->start;
@@ -56,14 +56,14 @@ my $ctrl = ControlFreak->new();
     my $wait = AE::cv;
     my $c = $ctrl->find_or_create_svc('c');
     $c->set_start_secs(0.001); ## very sort time
-    $c->set_cmd('sleep .25; exit 255'); # .25 >> .001
+    $c->set_cmd('sh -c "sleep .25; exit 255"'); # .25 >> .001
     $c->start;
     my $pid = $c->pid;
     my $t1 = AE::timer 0.15, 0, sub {
         ok $c->is_running, "is running";
         is $c->pid, $pid, "still same process";
         ## give us time when it restarts;
-        $c->set_cmd('sleep 300; exit 255');
+        $c->set_cmd('sh -c "sleep 300; exit 255"');
     };
     my $t2 = AE::timer 0.35, 0, sub {
         isnt $c->pid, $pid, "now in a new process";
@@ -81,7 +81,7 @@ my $ctrl = ControlFreak->new();
     $d->set_respawn_on_fail(0);
     ok !$d->respawn_on_fail, "unset";
     is $d->{backoff_retry}, undef, "no retry yet";
-    $d->set_cmd('sleep .15; exit 255'); # .15 << 1 the default
+    $d->set_cmd('sh -c "sleep .15; exit 255"'); # .15 << 1 the default
     $d->start;
     wait_for_starting($d);
     ok $d->is_starting, 'starting' or diag $d->state;
@@ -94,7 +94,7 @@ my $ctrl = ControlFreak->new();
 {
     my $e = $ctrl->find_or_create_svc('e');
     $e->set_respawn_on_stop(1);
-    $e->set_cmd('sleep .20; exit 0'); ## normal exit
+    $e->set_cmd('sh -c "sleep .20; exit 0"'); ## normal exit
     $e->set_start_secs(0.10);
     $e->start;
     wait_for_starting($e);
@@ -122,4 +122,20 @@ my $ctrl = ControlFreak->new();
     wait_for_stopped($f, 2);
     ok $f->is_stopped, "really stopped"
         or diag $f->state;
+}
+
+## same thing using the shell
+{
+    my $g = $ctrl->find_or_create_svc('g');
+    $g->set_respawn_on_stop(1);
+    $g->set_cmd('sleep 20');
+    $g->set_start_secs(0.10);
+    ok $g->is_stopped, "initially stopped";
+    $g->start;
+    wait_for_running($g);
+    ok $g->is_running, "now running" or diag $g->state;
+    $g->stop;
+    wait_for_stopped($g, 2);
+    ok $g->is_stopped, "really stopped"
+        or diag $g->state;
 }
