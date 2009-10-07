@@ -283,10 +283,11 @@ sub stop {
     ## there is a slight race condition here, since the child
     ## might have died just before we send the TERM signal, but
     ## we trust the kernel not to reallocate the pid in the meantime
-    kill 'TERM', $svc->pid;
-    $svc->{stop_time} = time;
+    $svc->{stop_time}  = time;
     $svc->{start_time} = undef;
-    $svc->{state} = 'stopping';
+    $svc->{state}      = 'stopping';
+    $svc->{wants_down} = 1;
+    kill 'TERM', $svc->pid;
     $ok->();
     return 1;
 }
@@ -338,6 +339,8 @@ sub start {
 
     $svc->{start_time} = time;
     $svc->{stop_time} = undef;
+    $svc->{wants_down} = undef;
+    $svc->{normal_exit} = undef;
     $svc->{state} = 'starting';
     $svc->_run_cmd;
     my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
@@ -602,23 +605,28 @@ sub _run_cmd {
         $svc->{child_cv} = undef;
         $svc->{pid} = undef;
         $svc->{exit_status} = $es;
+        my $name = $svc->name;
         my $state;
         if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
-            $svc->{ctrl}->log->info("child exited");
+            $svc->{ctrl}->log->info("child $name exited");
             $state = "stopped";
+            $svc->{normal_exit} = 1;
         }
         elsif (POSIX::WIFSIGNALED($es) && POSIX::WTERMSIG($es) == SIGTERM) {
-            $svc->{ctrl}->log->info("child gracefully killed");
+            $svc->{ctrl}->log->info("child $name gracefully killed");
             $state = "stopped";
         }
         else {
             return $svc->deal_with_failure;
         }
         $svc->{state} = $state;
+        $svc->optionally_respawn;
+
     });
     return 1;
 }
 
+## What to do when process doesn't exit cleanly
 sub deal_with_failure {
     my $svc = shift;
 
@@ -642,16 +650,26 @@ sub deal_with_failure {
             return;
         }
         $svc->{state}= "backoff";
-        my $backoff_delay = $svc->_exponential_backoff_delay($n);
+        my $backoff_delay     = $svc->_exponential_backoff_delay($n);
         $svc->{backoff_retry} = $n;
-        $svc->{backoff_cv} = AE::timer $backoff_delay, 0,
-                                       sub { $svc->_backoff_restart };
+        $svc->{backoff_cv}    = AE::timer $backoff_delay, 0,
+                                          sub { $svc->_backoff_restart };
     }
     ## Otherwise, just restart the failed service
     else {
         $svc->start;
     }
 
+    return;
+}
+
+sub optionally_respawn {
+    my $svc = shift;
+    return unless $svc->is_stopped;
+    return unless $svc->respawn_on_stop;
+    return if !$svc->{normal_exit}  # abnormal exits are not our business
+           or $svc->{wants_down};  # we really want it down
+    $svc->start;
     return;
 }
 

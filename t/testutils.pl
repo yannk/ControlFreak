@@ -2,6 +2,7 @@ use ControlFreak::Logger;
 use Time::HiRes qw/gettimeofday tv_interval/;
 
 sub wait_for_starting { wait_for_status('is_starting', @_) }
+sub wait_for_running  { wait_for_status('is_running', @_) }
 sub wait_for_down     { wait_for_status('is_down', @_) }
 sub wait_for_fail     { wait_for_status('is_fail', @_) }
 sub wait_for_stopped  { wait_for_status('is_stopped', @_) }
@@ -11,6 +12,7 @@ sub wait_for_status {
     my $cond = shift;
     my $svc = shift;
     my $max_wait = shift || 1;
+    #wait_for(sub { warn $svc->name . $svc->state; $svc->$cond }, $max_wait);
     wait_for(sub { $svc->$cond }, $max_wait);
 }
 
