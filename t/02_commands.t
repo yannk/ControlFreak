@@ -1,11 +1,13 @@
 use strict;
-use Find::Lib '../lib';
+use Find::Lib libs => [ '.', '../lib' ];
 use Test::More tests => 51;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
 
 use_ok 'ControlFreak::Command';
+require 'testutils.pl';
+shutoff_logs();
 
 my $ctrl = ControlFreak->new();
 my $error;

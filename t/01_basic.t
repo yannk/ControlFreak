@@ -4,9 +4,9 @@ use Test::More tests => 73;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
-use Time::HiRes qw/gettimeofday tv_interval/;
 
 require 'testutils.pl';
+shutoff_logs();
 
 use_ok 'ControlFreak::Console';
 
@@ -115,6 +115,7 @@ use_ok 'ControlFreak::Console';
     ok !$svc->pid;
 
     $svc->set_cmd([ 'perl', '-e', 'die "oh noes"' ]);
+    $svc->set_respawn_on_fail(0);
     $svc->start;
     ok $svc->pid, "got a pid";
     ok $svc->is_starting, "is starting (well supposedly)";
@@ -125,6 +126,7 @@ use_ok 'ControlFreak::Console';
     unlike $svc->fail_reason, qr/signal/, "no signal";
 
     $svc->set_cmd(['perl', '-e', 'kill 9, $$']);
+    $svc->set_respawn_on_fail(0);
     $svc->start;
     ok wait_for_fail($svc, 2);
     unlike $svc->fail_reason, qr/Exited/, "no exit code";
@@ -132,6 +134,7 @@ use_ok 'ControlFreak::Console';
 
     ## let's kill the process abruptly
     $svc->set_cmd(['perl', '-e', 'sleep 100']);
+    $svc->set_respawn_on_fail(0);
     $svc->start;
     ok wait_for_starting($svc);
     ok $svc->is_starting, "now starting, let's proceed with the killings";

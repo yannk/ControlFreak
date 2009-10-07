@@ -198,6 +198,8 @@ sub process_service {
 
     my $success;
     if (defined $value) {
+        $value = _as_bool($value) if $attr =~/ ^ ignore_std(out|err)
+                                               | respawn_on_(fail|stop) $/x;
         $success = $h->($svc, $value);
     }
     else {

@@ -7,10 +7,12 @@ use AnyEvent::Util();
 use AnyEvent::Handle();
 use Carp;
 use Data::Dumper();
-use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY };
+use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY _POSINT };
 use POSIX 'SIGTERM';
 
-use constant DEFAULT_START_SECS => 1;
+use constant DEFAULT_START_SECS  => 1;
+use constant DEFAULT_MAX_RETRIES => 8;
+use constant BASE_BACKOFF_DELAY  => 0.3;
 
 use Object::Tiny qw{
     name
@@ -31,6 +33,9 @@ use Object::Tiny qw{
     ignore_stdout
     start_secs
     stopwait_secs
+    respawn_on_fail
+    respawn_on_stop
+    respawn_max_retries
     user
     group
     priority
@@ -93,6 +98,13 @@ sub new {
         return;
     }
 
+    ## sensible default
+    $svc->{respawn_on_fail} = 1
+        unless exists $svc->{respawn_on_fail};
+
+    $svc->{respawn_max_retries} = DEFAULT_MAX_RETRIES
+        unless exists $svc->{respawn_max_retries};
+
     $svc->{ctrl} = $param{ctrl}
         or croak "Service requires a controller";
     return $svc;
@@ -107,6 +119,28 @@ return true if the state is 'failed'
 sub is_fail {
     my $state = shift->state || "";
     return $state eq 'fail';
+}
+
+=head2 is_backoff
+
+return true if the state is 'backoff'
+
+=cut
+
+sub is_backoff {
+    my $state = shift->state || "";
+    return $state eq 'backoff';
+}
+
+=head2 is_fatal
+
+return true if the state is 'fatal'
+
+=cut
+
+sub is_fatal {
+    my $state = shift->state || "";
+    return $state eq 'fatal';
 }
 
 =head2 is_running
@@ -307,10 +341,8 @@ sub start {
     $svc->{state} = 'starting';
     $svc->_run_cmd;
     my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
-    $svc->{start_cv} = AnyEvent->timer(
-        after => $start_secs,
-        cb    => sub { $svc->_check_running_state },
-    );
+    $svc->{start_cv} =
+        AE::timer $start_secs, 0, sub { $svc->_check_running_state };
 
     $ok->();
     return 1;
@@ -318,11 +350,30 @@ sub start {
 
 sub _check_running_state {
     my $svc = shift;
-    my $state = $svc->state;
-    return unless $state && $state eq 'starting';
+    $svc->{start_cv} = undef;
+    return unless $svc->is_starting;
     $svc->{ctrl}->log->debug("Now setting the service as running");
     $svc->{state} = 'running';
-    $svc->{start_cv} = undef;
+    $svc->{backoff_retry} = undef;
+}
+
+sub _backoff_restart {
+    my $svc = shift;
+    $svc->{backoff_cv} = undef;
+    return unless $svc->is_backoff;
+    my $n = $svc->{backoff_retry} + 1;
+    my $s = $svc->name;
+    $svc->{ctrl}->log->info("restarting $s [attempt: $n]");
+    $svc->start;
+    return;
+}
+
+sub _exponential_backoff_delay {
+    my $svc   = shift;
+    my $retry = shift || 1;
+    my $max_retries = $svc->respawn_max_retries;
+    my $factor = int(rand (2 * $retry - 1) + 1);
+    return $factor * BASE_BACKOFF_DELAY;
 }
 
 =head2 up(%param)
@@ -485,13 +536,33 @@ sub set_pipe_stdin {
 }
 
 sub set_ignore_stderr {
-    my $value = _STRING($_[1]) or return;
+    my $value = _STRING($_[1]);
+    return unless defined $value;
     shift->_set('ignore_stderr', $value);
 }
 
 sub set_ignore_stdout {
-    my $value = _STRING($_[1]) or return;
+    my $value = _STRING($_[1]);
+    return unless defined $value;
     shift->_set('ignore_stdout', $value);
+}
+
+sub set_respawn_on_fail {
+    my $value = _STRING($_[1]);
+    return unless defined $value;
+    shift->_set('respawn_on_fail', $value);
+}
+
+sub set_respawn_on_stop {
+    my $value = _STRING($_[1]);
+    return unless defined $value;
+    shift->_set('respawn_on_stop', $value);
+}
+
+sub set_respawn_max_retries {
+    my $value = _POSINT($_[1]);
+    return unless defined $value;
+    shift->_set('respawn_max_retries', $value);
 }
 
 sub _run_cmd {
@@ -530,6 +601,7 @@ sub _run_cmd {
         my $es = shift()->recv;
         $svc->{child_cv} = undef;
         $svc->{pid} = undef;
+        $svc->{exit_status} = $es;
         my $state;
         if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
             $svc->{ctrl}->log->info("child exited");
@@ -540,13 +612,47 @@ sub _run_cmd {
             $state = "stopped";
         }
         else {
-            $svc->{ctrl}->log->error("child terminated abnormally $es");
-            $svc->{exit_status} = $es;
-            $state = "fail";
+            return $svc->deal_with_failure;
         }
         $svc->{state} = $state;
     });
     return 1;
+}
+
+sub deal_with_failure {
+    my $svc = shift;
+
+    my $es = $svc->{exit_status};
+    $svc->{ctrl}->log->error("child terminated abnormally $es");
+
+    ## If we don't respawn on fail... just fail
+    if (! $svc->respawn_on_fail) {
+        $svc->{state} = 'fail';
+        return;
+    }
+
+    ## If the service failed while starting, enter backoff loop
+    if ($svc->is_starting) {
+        my $n = ++$svc->{backoff_retry} || 1;
+        if ($n >= $svc->{respawn_max_retries}) {
+            ## Exhausted options: bail
+            $svc->{state}      = 'fatal';
+            $svc->{backoff_cv} = undef;
+            $svc->{start_cv}   = undef;
+            return;
+        }
+        $svc->{state}= "backoff";
+        my $backoff_delay = $svc->_exponential_backoff_delay($n);
+        $svc->{backoff_retry} = $n;
+        $svc->{backoff_cv} = AE::timer $backoff_delay, 0,
+                                       sub { $svc->_backoff_restart };
+    }
+    ## Otherwise, just restart the failed service
+    else {
+        $svc->start;
+    }
+
+    return;
 }
 
 =head1 AUTHOR
