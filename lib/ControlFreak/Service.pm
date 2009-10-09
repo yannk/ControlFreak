@@ -9,6 +9,7 @@ use Carp;
 use Data::Dumper();
 use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY _POSINT };
 use POSIX 'SIGTERM';
+use Try::Tiny;
 
 use constant DEFAULT_START_SECS  => 1;
 use constant DEFAULT_MAX_RETRIES => 8;
@@ -294,7 +295,7 @@ sub stop {
 
 =head2 start(%param)
 
-Initiate service startup.
+Initiate service startup and returns immediately.
 
 params are:
 
@@ -355,7 +356,8 @@ sub _check_running_state {
     my $svc = shift;
     $svc->{start_cv} = undef;
     return unless $svc->is_starting;
-    $svc->{ctrl}->log->debug("Now setting the service as running");
+    my $name = $svc->name;
+    $svc->{ctrl}->log->debug("Now setting '$name' service as running");
     $svc->{state} = 'running';
     $svc->{backoff_retry} = undef;
 }
@@ -505,8 +507,12 @@ sub set_cmd_from_con {
     my $value = shift;
     return $svc->unset('cmd') unless defined $value;
     if ($value =~ /^\[/) {
-        $value = eval { JSON::Any->jsonToObj($value) };
-        return if $@;
+        $value = try { JSON::Any->jsonToObj($value) }
+        catch {
+            my $error = $_;
+            $svc->{ctrl}->log->error("Invalid JSON: $error");
+            return;
+        };
     }
     return $svc->set_cmd($value);
 }
@@ -571,14 +577,32 @@ sub set_respawn_max_retries {
 sub _run_cmd {
     my $svc = shift;
     my $ctrl = $svc->{ctrl};
-    $ctrl->log->info( sprintf "starting %s", $svc->name );
+    my $svcname = $svc->name;
+    $ctrl->log->info( sprintf "starting %s", $svcname );
 
     my %stds = (
         "<"  => "/dev/null",
         "2>" => "/dev/null",
         ">"  => "/dev/null",
     );
-    $stds{"<"} = $svc->pipe_stdin if $svc->pipe_stdin;
+    if (my $sockname = $svc->pipe_stdin) {
+        my $socket = $ctrl->socket($sockname);
+        if ($socket) {
+            if ($socket->is_bound) {
+                $ctrl->log->debug(
+                    "Socket '$sockname' piped to stdin for '$svcname'"
+                );
+                $stds{"<"} = $socket->fh;
+            }
+            else {
+                ## That's a bit annoying should we try to connect?
+                ## XXX probably
+                $ctrl->log->error(
+                    "Socket '$sockname' not bound. Fatal '$svcname'"
+                )
+            }
+        }
+    }
 
     ## what happens when the config changes?
     ## watcher *won't* get redefined leading to configuration

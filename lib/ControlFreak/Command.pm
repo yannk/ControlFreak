@@ -279,6 +279,68 @@ sub process_logger {
     return;
 }
 
+## FIXME: very similar to process_service
+sub process_socket {
+    my $class = shift;
+    my %param = @_;
+
+    my $cmd  = $param{cmd};
+    my $ok   = $param{ok_cb} || sub {};
+    my $err  = $param{err_cb} || sub {};
+    my $ctrl = $param{ctrl};
+
+    return $err->("not authorized")
+        unless $param{has_priv};
+
+    return $err->("empty socket command") unless $cmd;
+
+    my ($sockname, $attr, $assignment);
+    if ($cmd =~ /^([\w-]+)\s+([\w-]+)\s*=(.*)$/) {
+        $sockname    = $1;
+        $attr        = $2;
+        $assignment  = $3;
+    }
+    else {
+        return $err->("malformed socket command '$cmd'");
+    }
+
+    my $sock = $ctrl->find_or_create_sock($sockname)
+        or return $err->("socket name is invalid");
+
+    ## Clean the value, before assigning it
+    my $value = $assignment;
+    if (defined $value) {
+        $value =~ s/^\s+// ;
+        ## ugly (and repeated)
+        $value = _as_bool($value) if $attr eq 'nonblocking';
+
+        ## DWIM with quotes
+        if ($value =~ /^"(.*)"/ or $value =~ /^'(.*)'/) {
+            $value = $1;
+        }
+    }
+
+    if (defined $value && ! length $value) {
+        $value = undef;
+    }
+
+    ## attributes existence check
+    my $meth = "set_$attr";
+    my $h = $sock->can($meth);
+    return $err->("invalid property '$attr'")
+        unless $h;
+
+    my $success;
+    if (defined $value) {
+        $success = $h->($sock, $value);
+    }
+    else {
+        $success = $sock->unset($attr);
+    }
+
+    return $success ? $ok->() : $err->("invalid value");
+}
+
 sub _as_bool {
     my $value = shift;
     return 1 if $value =~ /^1| true| on| enabled|yes/xi;

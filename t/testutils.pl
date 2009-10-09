@@ -22,7 +22,7 @@ sub shutoff_logs {
 log4perl.rootLogger=FATAL, NULL
 log4perl.appender.NULL=Log::Log4perl::Appender::Screen
 log4perl.appender.NULL.layout=SimpleLayout
-log4perl.appender.Threshold = OFF
+log4perl.Threshold = OFF
 EOL
     };
 }

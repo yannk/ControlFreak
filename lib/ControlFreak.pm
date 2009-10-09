@@ -36,7 +36,7 @@ ControlFreak - a process supervisor
 
     ## elsewhere in the eventloop
     $ctrl->add_socket($sock);
-    $sock = $ctrl->socketmap->{$sockname};
+    $sock = $ctrl->socket($sockname);
 
     $svc = $ctrl->find_or_create($svcname);
     $ctrl->add_service($svc);
@@ -181,6 +181,45 @@ sub set_console {
     return;
 }
 
+=head2 socket($name)
+
+Return the L<ControlFreak::Socket> object of name C<$name> or return
+undef.
+
+=cut
+
+sub socket {
+    my $ctrl = shift;
+    my $name = shift || "";
+    return $ctrl->{socketmap}->{$name};
+}
+
+=head2 add_socket($socket)
+
+Add the C<$socket> L<ControlFreak::Socket> object passed in parameters
+to the list of socket this controller knows about.
+
+If a socket by that name already exists, it returns undef, otherwise
+it returns a true value;
+
+=cut
+
+sub add_socket {
+    my $ctrl = shift;
+    my $socket = shift;
+
+    my $name = $socket->name || "";
+    return if $ctrl->{socketmap}->{$name};
+    $ctrl->{socketmap}->{$name} = $socket;
+    return 1;
+}
+
+sub remove_socket {
+    my $ctrl = shift;
+    my $socket_name = shift;
+    return delete $ctrl->{socketmap}->{$socket_name};
+}
+
 =head2 find_or_create_svc($name)
 
 Given a service name in parameter (a string), searches for an existing
@@ -203,6 +242,21 @@ sub find_or_create_svc {
     return unless $svc;
 
     return $ctrl->{servicemap}{$svcname} = $svc;
+}
+
+sub find_or_create_sock {
+    my $ctrl = shift;
+    my $sockname = shift;
+    my $sock = $ctrl->{socketmap}{$sockname};
+    return $sock if $sock;
+
+    $sock = ControlFreak::Socket->new(
+        name  => $sockname,
+        ctrl  => $ctrl,
+    );
+    return unless $sock;
+
+    return $ctrl->{socketmap}{$sockname} = $sock;
 }
 
 =head2 logger
@@ -341,6 +395,22 @@ sub command_reload_config {
         fatal_errors => 0,
         skip_console => 1,
     );
+    return;
+}
+
+sub command_bind {
+    my $ctrl = shift;
+    my %param = @_;
+    my $args = $param{args} || [];
+    my $err = _CODE($param{err_cb}) || sub {};
+    my $ok  = _CODE($param{ok_cb})  || sub {};
+    my $sockname = shift @$args || "";
+    my $sock = $ctrl->socket($sockname);
+    unless ($sock) {
+        return $err->("unknown socket '$sockname'");
+    }
+    $sock->bind();
+    $ok->();
     return;
 }
 
