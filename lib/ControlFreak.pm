@@ -95,6 +95,15 @@ control them (making sure there are up or down)
 
 Pid management is always a nightmare when you want to cover all these needs.
 
+=head1 WHY?
+
+There are many similar programs freely available, but as stated above,
+ControlFreak does a few things differently (and hopefully better), also having
+ControlFreak written in Perl can be an important acceptance factor for some
+software shops :)
+
+=cut
+
 =head1 METHODS
 
 =head2 new(%param)
@@ -431,14 +440,5 @@ supervisor processes. In the same class there is also runit and monit.
 More recent modules which inspired ControlFreak are God and Supervisord
 in Python. Surprisingly I didn't find any similar program in Perl. Some
 ideas in ControlFreak are subtely different though.
-
-=head1 WHY?
-
-There are many similar programs freely available, but as stated above,
-ControlFreak does a few things differently (and hopefully better), also having
-ControlFreak written in Perl can be an important acceptance factor for some
-software shop :)
-
-=cut
 
 "If you have kids you probably know what I mean";
