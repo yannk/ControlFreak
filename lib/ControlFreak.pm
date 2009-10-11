@@ -102,6 +102,18 @@ ControlFreak does a few things differently (and hopefully better), also having
 ControlFreak written in Perl can be an important acceptance factor for some
 software shops :)
 
+C<ControlFreak> is also designed to be as simple as permitted. In order to keep
+the Core C<ControlFreak> stable, easy to understand and easy to run, there
+should be little added to the core features of running services and providing
+means to control them. For instance, C<ControlFreak> doesn't have on the
+roadmap to develop features to auto-restart process if they use too much
+memory, or to email you when some process has a snafu. We believe you can have
+another script/process interfacing with C<ControlFreak> which does exactly
+that.
+
+C<ControlFreak> wants to do one thing and only one thing well, and that thing
+is: B<run services, provide means to control their lifecycle>.
+
 =cut
 
 =head1 METHODS
