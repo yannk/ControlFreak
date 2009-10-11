@@ -114,6 +114,28 @@ that.
 C<ControlFreak> wants to do one thing and only one thing well, and that thing
 is: B<run services, provide means to control their lifecycle>.
 
+=head1 WHAT CONTROLFREAK ISN'T?
+
+From the above, it results, that B<ControlFreak> is no:
+
+=over 2
+
+=item * web/xmlrpc server
+
+=item * email/irc/im/xmpp client
+
+=item * memory watcher
+
+=item * application data store
+
+=item * restart scheduler
+
+=item * event bus for your services
+
+=item * sysinit replacement
+
+=back
+
 =cut
 
 =head1 METHODS
