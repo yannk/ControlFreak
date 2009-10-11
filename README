@@ -4,6 +4,8 @@ I'm still hacking on it.
 The documentation for the basic feature set is pretty
 much there though.
 
+It requires CVS version of AnyEvent (not released yet)
+
 
 INSTALLATION
 
