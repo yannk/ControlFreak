@@ -88,9 +88,8 @@ services.
   service perlbal cmd = /usr/bin/perlbal -c /etc/perlbal.conf
   service perlbal tags = prod
 
-  ## TODO
   socket fcgisock address = 127.0.0.1:8080
-  socket fcgisock options = TBD
+  socket fcgisock listen_qsize = 1024
 
   ## webNNN share a common socket through their stdin
   service web001 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
