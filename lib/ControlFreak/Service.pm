@@ -6,6 +6,7 @@ use AnyEvent '5.202';
 use AnyEvent::Util();
 use AnyEvent::Handle();
 use Carp;
+use ControlFreak::Util();
 use Data::Dumper();
 use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY _POSINT };
 use POSIX 'SIGTERM';
@@ -78,6 +79,9 @@ ControlFreak::Service - Object representation of a service.
 
     $web->running_cmd;
 
+    # make the service a proxied service
+    $web->assign_proxy($proxy);
+
 =head1 DESCRIPTION
 
 This allow manipulation of a service and its state.
@@ -110,6 +114,8 @@ sub new {
         or croak "Service requires a controller";
     return $svc;
 }
+
+sub _err { ControlFreak::Util::error(@_) }
 
 =head2 is_fail
 
@@ -199,9 +205,11 @@ sub is_up {
     my $state = $svc->state || "";
     return 0 unless $state =~ /^(?:running|starting|stopping)$/;
 
-    ## just in case, verify...
-    return 0 unless defined $svc->{child_cv};
-    return 0 unless defined $svc->pid;
+    unless ($svc->{proxy}) {
+        ## just in case, verify...
+        return 0 unless defined $svc->{child_cv};
+        return 0 unless defined $svc->pid;
+    }
     return 1;
 }
 
@@ -269,18 +277,16 @@ Optional.
 sub stop {
     my $svc = shift;
     my %param = @_;
-    my $err = $param{err_cb} || sub {};
-    my $ok  = $param{ok_cb}  || sub {};
+    my $err = $param{err_cb} ||= sub {};
+    my $ok  = $param{ok_cb}  ||= sub {};
 
     my $svcname = $svc->name || "unnamed service";
-    if ($svc->is_down) {
-        $err->("Service '$svcname' is already down");
-        return;
-    }
-    unless ($svc->pid) {
-        $err->("Service '$svcname' lost its pid");
-        return;
-    }
+    return $svc->_err(%param, "Service '$svcname' is already down")
+        if $svc->is_down;
+
+    return $svc->_err(%param, "Service '$svcname' lost its pid")
+        unless $svc->pid;
+
     ## there is a slight race condition here, since the child
     ## might have died just before we send the TERM signal, but
     ## we trust the kernel not to reallocate the pid in the meantime
@@ -288,7 +294,13 @@ sub stop {
     $svc->{start_time} = undef;
     $svc->{state}      = 'stopping';
     $svc->{wants_down} = 1;
-    kill 'TERM', $svc->pid;
+
+    if (my $proxy = $svc->{proxy}) {
+        $proxy->stop_service(%param, service => $svc);
+    }
+    else {
+        kill 'TERM', $svc->pid;
+    }
     $ok->();
     return 1;
 }
@@ -324,31 +336,58 @@ Optional.
 sub start {
     my $svc = shift;
     my %param = @_;
-    my $err = $param{err_cb} || sub {};
-    my $ok  = $param{ok_cb}  || sub {};
+    my $err = $param{err_cb} ||= sub {};
+    my $ok  = $param{ok_cb}  ||= sub {};
 
     my $svcname = $svc->name || "unnamed service";
-    if ($svc->is_up) {
-        $err->("Service '$svcname' is already up");
-        return;
-    }
-    my $cmd = $svc->cmd;
-    unless ($cmd) {
-        $err->("Service '$svcname' has no known command");
-        return;
-    }
 
-    $svc->{start_time} = time;
-    $svc->{stop_time} = undef;
-    $svc->{wants_down} = undef;
+    return $svc->_err(%param, "Service '$svcname' is already up")
+        if $svc->is_up;
+
+    my $cmd = $svc->cmd;
+    return $svc->_err(%param, "Service '$svcname' has no known command")
+        unless $cmd;
+
+    $svc->{start_time}  = time;
+    $svc->{stop_time}   = undef;
+    $svc->{wants_down}  = undef;
     $svc->{normal_exit} = undef;
     $svc->{state} = 'starting';
-    $svc->_run_cmd;
+
     my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
     $svc->{start_cv} =
         AE::timer $start_secs, 0, sub { $svc->_check_running_state };
 
+    if (my $proxy = $svc->{proxy}) {
+        $proxy->start_service(%param, service => $svc);
+    }
+    else {
+        $svc->_run_cmd;
+    }
+
     $ok->();
+    return 1;
+}
+
+=head2 has_stopped($reason)
+
+Called when a third party knows that a service has stopped. It marks the
+service has stopped, no matter what the current status is.
+
+=cut
+
+## FIXME name
+sub has_stopped {
+    my $svc = shift;
+    my $reason = shift;
+    return if $svc->is_down;
+
+    my $name = $svc->name;
+    $svc->{state} = 'fail';
+    $svc->{stop_time} = time;
+    $svc->{normal_exit} = undef;
+    $svc->{child_cv} = undef;
+    $svc->{ctrl}->log->info($reason || "'$name' has stopped");
     return 1;
 }
 
@@ -356,6 +395,16 @@ sub _check_running_state {
     my $svc = shift;
     $svc->{start_cv} = undef;
     return unless $svc->is_starting;
+    if (! $svc->pid) {
+        if (my $proxy = $svc->{proxy}) {
+            $svc->{ctrl}->log->error("service vanished on start, check proxy");
+        }
+        else {
+            $svc->{ctrl}->log->error("smth went terribly wrong");
+        }
+        $svc->{state} = 'fail';
+        return;
+    }
     my $name = $svc->name;
     $svc->{ctrl}->log->debug("Now setting '$name' service as running");
     $svc->{state} = 'running';
@@ -389,8 +438,7 @@ XXX up the service (do nothing if already up)
 sub up {
     my $svc = shift;
     return if $svc->is_up;
-    $svc->start();
-    return;
+    return $svc->start(@_);
 }
 
 =head2 up(%param)
@@ -401,8 +449,7 @@ XXX down the service (do nothing if already down)
 sub down {
     my $svc = shift;
     return if $svc->is_down;
-    $svc->stop();
-    return;
+    return $svc->stop(@_);
 }
 
 =head2 restart(%param)
@@ -460,10 +507,17 @@ It consists in tab separated list of fields:
 =back
 
 =cut
+
 sub desc_as_text {
     my $svc = shift;
     return join "\t", map { $svc->$_ || "" }
            qw/name tags desc/;
+}
+
+sub assign_proxy {
+    my $svc = shift;
+    $svc->{proxy} = shift;
+    return 1;
 }
 
 sub _set {
@@ -507,7 +561,7 @@ sub set_cmd_from_con {
     my $value = shift;
     return $svc->unset('cmd') unless defined $value;
     if ($value =~ /^\[/) {
-        $value = try { JSON::Any->jsonToObj($value) }
+        $value = try { JSON::Any->decode($value) }
         catch {
             my $error = $_;
             $svc->{ctrl}->log->error("Invalid JSON: $error");
@@ -626,28 +680,37 @@ sub _run_cmd {
     );
     $svc->{child_cv}->cb( sub {
         my $es = shift()->recv;
-        $svc->{child_cv} = undef;
-        $svc->{pid} = undef;
-        $svc->{exit_status} = $es;
-        my $name = $svc->name;
-        my $state;
-        if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
-            $svc->{ctrl}->log->info("child $name exited");
-            $state = "stopped";
-            $svc->{normal_exit} = 1;
-        }
-        elsif (POSIX::WIFSIGNALED($es) && POSIX::WTERMSIG($es) == SIGTERM) {
-            $svc->{ctrl}->log->info("child $name gracefully killed");
-            $state = "stopped";
-        }
-        else {
-            return $svc->deal_with_failure;
-        }
-        $svc->{state} = $state;
-        $svc->optionally_respawn;
-
+        $svc->acknowledge_exit($es);
     });
     return 1;
+}
+
+sub acknowledge_exit {
+    my $svc = shift;
+    my $es = shift;
+
+    my $ctrl = $svc->{ctrl};
+    my $name = $svc->name;
+
+    $svc->{child_cv}    = undef;
+    $svc->{pid}         = undef;
+    $svc->{exit_status} = $es;
+
+    my $state;
+    if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
+        $ctrl->log->info("child $name exited");
+        $state = "stopped";
+        $svc->{normal_exit} = 1;
+    }
+    elsif (POSIX::WIFSIGNALED($es) && POSIX::WTERMSIG($es) == SIGTERM) {
+        $ctrl->log->info("child $name gracefully killed");
+        $state = "stopped";
+    }
+    else {
+        return $svc->deal_with_failure;
+    }
+    $svc->{state} = $state;
+    $svc->optionally_respawn;
 }
 
 ## What to do when process doesn't exit cleanly
@@ -681,6 +744,7 @@ sub deal_with_failure {
     }
     ## Otherwise, just restart the failed service
     else {
+        $svc->{state} = 'fail';
         $svc->start;
     }
 

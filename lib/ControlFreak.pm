@@ -14,6 +14,7 @@ use Carp;
 use ControlFreak::Command;
 use ControlFreak::Logger;
 use ControlFreak::Service;
+use ControlFreak::Proxy;
 use Params::Util qw{ _ARRAY _CODE };
 
 our $CRLF = "\015\012";
@@ -159,6 +160,7 @@ sub new {
 
     $ctrl->{servicemap} = {};
     $ctrl->{socketmap}  = {};
+    $ctrl->{proxymap}   = {};
 
     $ctrl->{log} = ControlFreak::Logger->new(
         config_file => $param{log_config_file},
@@ -207,6 +209,18 @@ sub service {
     my $ctrl = shift;
     my ($svcname) = shift or return;
     return $ctrl->{servicemap}{$svcname};
+}
+
+=head2 proxy($name)
+
+Return the proxy of name C<$name> or nothing.
+
+=cut
+
+sub proxy {
+    my $ctrl = shift;
+    my ($proxyname) = shift or return;
+    return $ctrl->{proxymap}{$proxyname};
 }
 
 =head2 set_console
@@ -263,6 +277,32 @@ sub remove_socket {
     return delete $ctrl->{socketmap}->{$socket_name};
 }
 
+=head2 add_proxy($proxy)
+
+Add the C<$proxy> L<ControlFreak::Proxy> object passed in parameters
+to the list of proxies this controller knows about.
+
+If a proxy by that name already exists, it returns undef, otherwise
+it returns a true value;
+
+=cut
+
+sub add_proxy {
+    my $ctrl = shift;
+    my $proxy = shift;
+
+    my $name = $proxy->name || "";
+    return if $ctrl->{proxymap}->{$name};
+    $ctrl->{proxymap}->{$name} = $proxy;
+    return 1;
+}
+
+sub remove_proxy {
+    my $ctrl = shift;
+    my $proxy_name = shift;
+    return delete $ctrl->{proxymap}->{$proxy_name};
+}
+
 =head2 find_or_create_svc($name)
 
 Given a service name in parameter (a string), searches for an existing
@@ -300,6 +340,21 @@ sub find_or_create_sock {
     return unless $sock;
 
     return $ctrl->{socketmap}{$sockname} = $sock;
+}
+
+sub find_or_create_proxy {
+    my $ctrl = shift;
+    my $proxyname = shift;
+    my $proxy = $ctrl->{proxymap}{$proxyname};
+    return $proxy if $proxy;
+
+    $proxy = ControlFreak::Proxy->new(
+        name  => $proxyname,
+        ctrl  => $ctrl,
+    );
+    return unless $proxy;
+
+    return $ctrl->{proxymap}{$proxyname} = $proxy;
 }
 
 =head2 logger
@@ -369,6 +424,26 @@ sub command_stop    { _command_ctrl('stop',    @_ ) }
 sub command_restart { _command_ctrl('restart', @_ ) }
 sub command_down    { _command_ctrl('down',    @_ ) }
 sub command_up      { _command_ctrl('up',      @_ ) }
+
+## for now, at least this is separated.
+## but could we imagine a command start all running proxies as well?
+sub command_run {
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $err  = _CODE($param{err_cb}) || sub {};
+    my $ok   = _CODE($param{ok_cb})  || sub {};
+
+    my $proxyname = $param{args}[0];
+
+    my $proxy = $ctrl->proxy($proxyname || "");
+    if (! $proxy) {
+        return $err->("Couldn't find a valid proxy. bailing.");
+    }
+    $proxy->run;
+    $ok->();
+    return;
+}
 
 sub _command_ctrl {
     my $meth = shift;

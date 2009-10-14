@@ -1,0 +1,94 @@
+use strict;
+use Find::Lib libs => [ '.', '../lib' ];
+use Test::More tests => 24;
+use ControlFreak;
+use AnyEvent;
+use AnyEvent::Handle;
+
+use_ok 'ControlFreak::Proxy';
+require 'testutils.pl';
+shutoff_logs();
+
+my $ctrl = ControlFreak->new();
+my $error;
+my $ok;
+
+### Helpers
+sub process {
+    $error = undef;
+    $ok = undef;
+    ControlFreak::Command->process(
+        ctrl   => $ctrl,
+        err_cb => sub { $error = shift },
+        ok_cb  => sub { $ok    =     1 },
+        @_
+    );
+    return;
+};
+
+sub like_error {
+    my $re = shift;
+    process(@_);
+    !$error ? ok 0, "no error" : like $error, $re, "error in process";
+}
+
+sub process_ok {
+    process(@_);
+    my %p = @_;
+    ok $ok, $p{cmd};
+}
+
+## Test some errors
+{
+    like_error qr/malformed proxy/, has_priv => 1, cmd => "proxy proxy";
+    like_error qr/malformed prox/, has_priv => 1, cmd => "proxy service=s";
+    like_error qr/malformed ser/, has_priv => 1, cmd => "proxy a service cmd=s";
+    like_error qr/auth/, has_priv => 0, cmd => "proxy a service svc cmd=s";
+}
+
+## test proxy interface
+{
+    my $ctrl2 = ControlFreak->new();
+    my $svc   = ControlFreak::Service->new(
+        ctrl => $ctrl2,
+        name => 'somesvc',
+        cmd => 'sleep 99',
+    );
+    my $proxy = ControlFreak::Proxy->new(ctrl => $ctrl2, name => 'a');
+    is $proxy->{cmd}, undef, "no command to our proxy yet";
+    $proxy->add_service($svc);
+    is scalar $proxy->services, 1, "one service";
+    is $svc->cmd, 'sleep 99';
+    ok $svc->{proxy}, "and a proxy assigned";
+
+    ok !$proxy->is_running;
+    ok !$proxy->pid;
+    $proxy->run;
+    ok ! $proxy->is_running, "proxy is not running, it has no command";
+    $proxy->set_cmd('sleep 100');
+    is $proxy->cmd, 'sleep 100', "no proxy has a (dumb) command";
+    ok !$proxy->is_running;
+    $proxy->run;
+    ok $proxy->is_running;
+    ok $proxy->pid;
+
+    kill 'TERM', $proxy->pid if $proxy->pid;
+    wait_for (sub { !$proxy->is_running });
+    ok !$proxy->is_running, "proxy got killed";
+    is $proxy->pid, undef, "and pid cleared";
+
+    ## rerun the proxy
+    $proxy->run;
+    $svc->start;
+    ok $svc->is_starting, "service is starting";
+    ok $proxy->is_running, "proxy is running";
+    $proxy->shutdown;
+    ok $svc->is_fail or diag $svc->state;
+}
+
+## valid commands
+{
+    process_ok(has_priv => 1, cmd => "proxy a service somesvc cmd=sleep 99");
+    ok my $proxy = $ctrl->proxy('a'), "proxy declared";
+    ok my $svc = $ctrl->service('somesvc'), "now svc a has been created";
+}

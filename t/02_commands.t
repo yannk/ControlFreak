@@ -34,7 +34,8 @@ sub like_error {
 
 sub process_ok {
     process(@_);
-    ok $ok, $_{cmd};
+    my %p = @_;
+    ok $ok, $p{cmd};
 }
 
 ## Test some errors

@@ -138,7 +138,7 @@ sub process_console {
         $console->{full} = $value;
     }
 
-    return $ok->() if $success;
+    return $ok->($console) if $success;
     return $err->("unknown console attribute: '$attr'");
 }
 
@@ -187,7 +187,7 @@ sub process_service {
     ## cmd is special because of the array syntax
     if ($attr eq 'cmd') {
         my $succ = $svc->set_cmd_from_con($value);
-        return $succ ? $ok->() : $err->("invalid value");
+        return $succ ? $ok->($svc) : $err->("invalid value");
     }
 
     ## attributes existence check
@@ -206,7 +206,7 @@ sub process_service {
         $success = $svc->unset($attr);
     }
 
-    return $success ? $ok->() : $err->("invalid value");
+    return $success ? $ok->($svc) : $err->("invalid value");
 }
 
 sub process_command {
@@ -275,7 +275,7 @@ sub process_logger {
         $success = $logger->unset($attr);
     }
 
-    return $success ? $ok->() : $err->("invalid value");
+    return $success ? $ok->($logger) : $err->("invalid value");
     return;
 }
 
@@ -338,7 +338,91 @@ sub process_socket {
         $success = $sock->unset($attr);
     }
 
-    return $success ? $ok->() : $err->("invalid value");
+    return $success ? $ok->($sock) : $err->("invalid value");
+}
+
+sub process_proxy {
+    my $class = shift;
+    my %param = @_;
+
+    my $cmd  = $param{cmd};
+    my $ok   = $param{ok_cb} || sub {};
+    my $err  = $param{err_cb} || sub {};
+    my $ctrl = $param{ctrl};
+
+    return $err->("not authorized")
+        unless $param{has_priv};
+
+    return $err->("empty proxy command") unless $cmd;
+
+    my ($proxyname, $subcmd, $rest, $attr, $assignment);
+    if ($cmd =~ /^([\w-]+)\s+([\w-]+)\s+(.+)$/) {
+        $proxyname = $1;
+        $subcmd    = $2;
+        $rest      = $3;
+    }
+    elsif ($cmd =~ /^([\w-]+)\s+([\w-]+)\s*=(.*)$/) {
+        $proxyname  = $1;
+        $attr       = $2;
+        $assignment = $3;
+    }
+    else {
+        return $err->("malformed proxy command '$cmd'");
+    }
+
+    my $proxy = $ctrl->find_or_create_proxy($proxyname)
+        or return $err->("proxy name is invalid");
+
+    if ($subcmd && $subcmd eq 'service') {
+        my $svc;
+        $class->process_service(
+            cmd      => $rest,
+            ctrl     => $ctrl,
+            has_priv => 1,
+            ok_cb    => sub { $svc = $_[0] },
+            err_cb   => $err,
+        );
+        return unless $svc;
+        $proxy->add_service($svc);
+        return $ok->($proxy);
+    }
+
+    ## cmd is special because of the array syntax
+    if ($attr eq 'cmd') {
+        my $succ = $proxy->set_cmd_from_con($assignment);
+        return $succ ? $ok->($proxy) : $err->("invalid value");
+    }
+
+    ## Clean the value, before assigning it
+    my $value = $assignment;
+    if (defined $value) {
+        $value =~ s/^\s+// ;
+
+        ## DWIM with quotes
+        if ($value =~ /^"(.*)"/ or $value =~ /^'(.*)'/) {
+            $value = $1;
+        }
+    }
+
+    if (defined $value && ! length $value) {
+        $value = undef;
+    }
+
+    ## attributes existence check
+    my $meth = "set_$attr";
+    my $h = $proxy->can($meth);
+    return $err->("invalid property '$attr'")
+        unless $h;
+
+    my $success;
+    if (defined $value) {
+        $success = $h->($proxy, $value);
+    }
+    else {
+        $success = $proxy->unset($attr);
+    }
+
+    return $success ? $ok->($proxy) : $err->("invalid value");
 }
 
 sub _as_bool {
