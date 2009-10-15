@@ -8,6 +8,7 @@ use AnyEvent::Handle();
 use Carp;
 use ControlFreak::Util();
 use Data::Dumper();
+use JSON::XS;
 use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY _POSINT };
 use POSIX 'SIGTERM';
 use Try::Tiny;
@@ -568,7 +569,7 @@ sub set_cmd_from_con {
     my $value = shift;
     return $svc->unset('cmd') unless defined $value;
     if ($value =~ /^\[/) {
-        $value = try { JSON::Any->decode($value) }
+        $value = try { decode_json($value) }
         catch {
             my $error = $_;
             $svc->{ctrl}->log->error("Invalid JSON: $error");

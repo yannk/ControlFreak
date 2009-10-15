@@ -4,7 +4,7 @@ use warnings;
 
 use AnyEvent::Util();
 use Carp;
-use JSON::Any;
+use JSON::XS;
 use Object::Tiny qw{ name cmd pid is_running };
 use Params::Util qw{ _ARRAY _STRING };
 use POSIX 'SIGTERM';
@@ -153,8 +153,7 @@ sub start_service {
         ignore_stdout => $svc->ignore_stdout,
         env           => $svc->env,
     };
-    my $json = JSON::Any->new;
-    my $string = $json->encode($descr);
+    my $string = encode_json($descr);
     $hdl->push_write($string);
 }
 
@@ -173,8 +172,7 @@ sub stop_service {
         command => 'stop',
         name    => $svc->name,
     };
-    my $json = JSON::Any->new;
-    my $string = $json->encode($descr);
+    my $string = encode_json($descr);
     $hdl->push_write($string);
 }
 
@@ -195,8 +193,7 @@ sub set_cmd_from_con {
     my $value = shift;
     return $proxy->unset('cmd') unless defined $value;
     if ($value =~ /^\[/) {
-        my $json = JSON::Any->new;
-        $value = try { $json->decode($value) }
+        $value = try { decode_json($value) }
         catch {
             my $error = $_;
             $proxy->{ctrl}->log->error("Invalid JSON: $error");
@@ -331,8 +328,7 @@ sub process_status {
     my $json_data = shift;
 
     my $ctrl = $proxy->{ctrl};
-    my $json = JSON::Any->new;
-    my $data = $json->decode($json_data);
+    my $data = decode_json($json_data);
 
     my $pname  = $proxy->name;
     my $name   = $data->{name} || "";

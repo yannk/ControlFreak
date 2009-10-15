@@ -6,7 +6,6 @@ use ControlFreak::Service;
 use ControlFreak::Console;
 use ControlFreak::Socket;
 use AnyEvent::Socket();
-use JSON::Any;
 use Params::Util qw{ _STRING _INSTANCE _CODE };
 use Carp;
 

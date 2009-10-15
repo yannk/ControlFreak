@@ -6,7 +6,7 @@ use warnings;
 use AnyEvent();
 use AnyEvent::Handle();
 use AnyEvent::Util();
-use JSON::Any;
+use JSON::XS;
 use Try::Tiny;
 
 =head1 NAME
@@ -56,9 +56,8 @@ sub process_command {
     my $proxy = shift;
     my $command = shift;
 
-    my $json = JSON::Any->new;
     my $param = try {
-        $json->decode($command)
+        decode_json($command)
     } catch {
         print STDERR "parse error in command $command: $_\n";
         return;
@@ -100,8 +99,7 @@ sub start_service {
 sub send_status {
     my $proxy = shift;
     my ($cmd, $name, $pid, $es) = @_;
-    my $json = JSON::Any->new;
-    my $string = $json->encode({
+    my $string = encode_json({
         status => $cmd,
         name => $name,
         pid => $pid,
