@@ -425,6 +425,27 @@ sub command_restart { _command_ctrl('restart', @_ ) }
 sub command_down    { _command_ctrl('down',    @_ ) }
 sub command_up      { _command_ctrl('up',      @_ ) }
 
+sub _command_ctrl {
+    my $meth = shift;
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $err  = _CODE($param{err_cb}) || sub {};
+    my $ok   = _CODE($param{ok_cb})  || sub {};
+    my @svcs = $ctrl->services_from_args(
+        %param, err_cb => $err, ok_cb => $ok,
+    );
+    if (! @svcs) {
+        return $err->("Couldn't find a valid service. bailing.");
+    }
+    my $n = 0;
+    for (@svcs) {
+        $_->$meth(err_cb => $err, ok_cb => sub { $n++ });
+    }
+    $ok->("done $n");
+    return;
+}
+
 ## for now, at least this is separated.
 ## but could we imagine a command start all running proxies as well?
 sub command_run {
@@ -445,24 +466,21 @@ sub command_run {
     return;
 }
 
-sub _command_ctrl {
-    my $meth = shift;
+sub command_shutdown {
     my $ctrl = shift;
     my %param = @_;
 
     my $err  = _CODE($param{err_cb}) || sub {};
     my $ok   = _CODE($param{ok_cb})  || sub {};
-    my @svcs = $ctrl->services_from_args(
-        %param, err_cb => $err, ok_cb => $ok,
-    );
-    if (! @svcs) {
-        return $err->("Couldn't find a valid service. bailing.");
+
+    my $proxyname = $param{args}[0];
+
+    my $proxy = $ctrl->proxy($proxyname || "");
+    if (! $proxy) {
+        return $err->("Couldn't find a valid proxy. bailing.");
     }
-    my $n = 0;
-    for (@svcs) {
-        $_->$meth(err_cb => $err, ok_cb => sub { $n++ });
-    }
-    $ok->("done $n");
+    $proxy->shutdown;
+    $ok->();
     return;
 }
 

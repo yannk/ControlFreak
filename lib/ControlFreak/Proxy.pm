@@ -242,9 +242,10 @@ Run the proxy command.
 sub run {
     my $proxy = shift;
     my %param = @_;
-    my $err = $param{err_cb} || sub {};
+    my $err = $param{err_cb} ||= sub {};
+
     my $name = $proxy->name;
-    return $err->("Proxy '$name' cannot run, it has no command")
+    return $proxy->_err(%param, "Proxy '$name' can't run: no command")
         unless $proxy->cmd;
 
     $proxy->{is_running} = 1;
@@ -309,6 +310,35 @@ sub run {
     );
 }
 
+=head2 shutdown
+
+Quit the proxy (and consequently stop all related services).
+
+=cut
+
+sub shutdown {
+    my $proxy = shift;
+    my %param = @_;
+
+    my $ok  = $param{ok_cb} ||= sub {};
+    my $err = $param{err_cb} ||= sub {};
+
+    my $name = $proxy->name;
+    $proxy->{ctrl}->log->info("shutting down proxy '$name'");
+    $proxy->{command_hdl} = undef;
+
+    if (my $pid = $proxy->pid) {
+        kill 'TERM', $pid;
+    }
+    $proxy->{proxy_cv} = undef;
+    $proxy->has_stopped;
+
+    $proxy->{status_cv} = undef;
+    $proxy->{status_fh} = undef;
+    $ok->();
+    return 1;
+}
+
 sub read_status {
     my $proxy = shift;
     my $status_fh = $proxy->{status_fh} or return;
@@ -350,35 +380,11 @@ sub process_status {
     }
 }
 
-=head2 services
+=head2 has_stopped
 
-Return a list of C<ControlFreak::Service> instance under the control of the
-proxy.
-
-=cut
-
-=head2 shutdown
-
-Quit the proxy (and consequently stop all related services).
+TBD
 
 =cut
-
-sub shutdown {
-    my $proxy = shift;
-    my $name = $proxy->name;
-    $proxy->{ctrl}->log->info("shutting down proxy '$name'");
-    $proxy->{command_hdl} = undef;
-
-    if (my $pid = $proxy->pid) {
-        kill 'TERM', $pid;
-    }
-    $proxy->{proxy_cv} = undef;
-    $proxy->has_stopped;
-
-    $proxy->{status_cv} = undef;
-    $proxy->{status_fh} = undef;
-    return 1;
-}
 
 sub has_stopped {
     my $proxy = shift;
