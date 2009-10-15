@@ -39,9 +39,11 @@ open my $sfh, ">>&=$sfd"
 
 AnyEvent::Util::fh_nonblocking($_, 1) for ($cfh, $sfh);
 
+my $sockets = ControlFreak::Proxy::Process->sockets_from_env;
 my $proxy = ControlFreak::Proxy::Process->new(
     command_fh => $cfh,
     status_fh  => $sfh,
+    sockets    => $sockets,
 );
 
 AnyEvent->condvar->recv;
@@ -58,7 +60,7 @@ cfk-share-mem-proxy.pl [options]
 
 Options:
 
- -p, --preload        a module/file that will be preloaded (using 'require')
+ -p, --preload        A module/file that will be preloaded (using 'require')
 
  -h, --help           Help
  -m, --man            More help

@@ -189,7 +189,7 @@ sub load_config {
 
 =head2 services
 
-returns an array of L<ControlFreak::Service> instances known to this
+returns a list of L<ControlFreak::Service> instances known to this
 controller.
 
 =cut
@@ -197,6 +197,17 @@ controller.
 sub services {
     my $ctrl = shift;
     return values %{ $ctrl->{servicemap} };
+}
+
+=head2 sockets
+
+returns a list of L<ControlFreak::Socket> instances known to this
+controller.
+
+=cut
+sub sockets {
+    my $ctrl = shift;
+    return values %{ $ctrl->{socketmap} };
 }
 
 =head2 service($name)

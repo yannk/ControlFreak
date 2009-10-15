@@ -152,6 +152,7 @@ sub start_service {
         ignore_stderr => $svc->ignore_stderr,
         ignore_stdout => $svc->ignore_stdout,
         env           => $svc->env,
+        tie_stdin_to  => $svc->tie_stdin_to,
     };
     my $string = encode_json($descr);
     $hdl->push_write($string);
@@ -233,6 +234,18 @@ sub _set {
     return 1;
 }
 
+sub write_sockets_to_env {
+    my $proxy = shift;
+
+    my $ctrl  = $proxy->{ctrl};
+    for my $socket ($ctrl->sockets) {
+        my $fh = $socket->fh or next;
+        my $prefix = "_CFK_SOCK_";
+        my $name = $prefix . $socket->name;
+        $ENV{$name} = fileno $fh;
+    }
+}
+
 =head2 run
 
 Run the proxy command.
@@ -266,8 +279,10 @@ sub run {
         "$crno>"   => $cr,
         "$swno<"   => $sw,
         '$$'       => \$proxy->{pid},
-        close_all  => 1,
-        on_prepare => sub {}, ## XXX
+        close_all  => 0,
+        on_prepare => sub {
+            $proxy->write_sockets_to_env;
+        },
     );
 
     $proxy->{proxy_cv}->cb( sub {

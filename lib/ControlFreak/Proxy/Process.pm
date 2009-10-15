@@ -81,9 +81,27 @@ sub start_service {
     my $name = $param->{name};
     my $cmd  = $param->{cmd};
     my $svc  = $proxy->{services}{$name};
+
+    my %stds = (
+        "<"  => "/dev/null",
+        ">"  => "/dev/null",
+        "2>" => "/dev/null",
+    );
+    if (my $sockname = $param->{tie_stdin_to}) {
+        my $socket = $ctrl->socket($sockname);
+        $ctrl->log->debug( "Tying '$sockname' to stdin of '$name'" );
+        if ( my $fd = $proxy->{sockets}{$sockname} ) {
+            $stds{"<"} = $fd;
+        }
+        else {
+            $ctrl->log->error("'$sockname' not found in proxy" );
+        }
+    }
+
     $svc->{cv} = AnyEvent::Util::run_cmd(
         $cmd,
         '$$' => \$svc->{pid},
+        %stds,
     );
     $proxy->send_status('started', $name, $svc->{pid});
 
@@ -107,6 +125,17 @@ sub send_status {
     });
 
     $proxy->{status_hdl}->push_write($string);
+}
+
+sub sockets_from_env {
+    my $class = shift;
+
+    my $sockets = {};
+    for (keys %ENV) {
+        next unless /^_CFK_SOCK_(.+)$/;
+        $sockets->{$1} = $ENV{$_};
+    }
+    return $sockets;
 }
 
 1;

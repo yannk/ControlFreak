@@ -644,8 +644,8 @@ sub _run_cmd {
 
     my %stds = (
         "<"  => "/dev/null",
-        "2>" => "/dev/null",
         ">"  => "/dev/null",
+        "2>" => "/dev/null",
     );
     if (my $sockname = $svc->tie_stdin_to) {
         my $socket = $ctrl->socket($sockname);
