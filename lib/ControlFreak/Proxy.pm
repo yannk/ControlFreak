@@ -258,16 +258,10 @@ sub run {
 
     AnyEvent::Util::fh_nonblocking($_, 1) for ($sr, $cw);
 
-    my $crno = 3 || fileno $cr;
-    my $swno = 4 || fileno $sw;
+    my $crno = 3;
+    my $swno = 4;
 
     my $cmd = $proxy->cmd;
-    if (ref $cmd) {
-        push @$cmd, "--command-fd=$crno", "--status-fd=$swno";
-    }
-    else {
-        $cmd .= " --command-fd=$crno --status-fd=$swno";
-    }
 
     $proxy->{proxy_cv} = AnyEvent::Util::run_cmd(
         $cmd,

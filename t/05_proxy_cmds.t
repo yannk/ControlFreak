@@ -67,7 +67,7 @@ sub process_ok {
     ok ! $proxy->is_running, "proxy is not running, it has no command";
     $proxy->set_cmd('sleep 100');
     is $proxy->cmd, 'sleep 100', "no proxy has a (dumb) command";
-    ok !$proxy->is_running;
+    ok !$proxy->is_running, "not running";
     $proxy->run;
     ok $proxy->is_running;
     ok $proxy->pid;
