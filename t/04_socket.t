@@ -77,8 +77,8 @@ my $ctrl = ControlFreak->new();
     ok $sock, "created socket";
     my $svc = $ctrl->find_or_create_svc("s1");
     $svc->set_cmd("$SOCKCAT s1"); # pipe stdin to stdout
-    $svc->set_pipe_stdin('testsock');
-    is $svc->pipe_stdin, 'testsock', "pipe_stdin set";
+    $svc->set_tie_stdin_to('testsock');
+    is $svc->tie_stdin_to, 'testsock', "tie_stdin_to set";
 
     $sock->bind;
     $svc->start;
@@ -103,7 +103,7 @@ my $ctrl = ControlFreak->new();
     $svc->start;
     my $svc2 = $ctrl->find_or_create_svc("s2");
     $svc2->set_cmd("$SOCKCAT s2 2"); # pipe stdin to stdout
-    $svc2->set_pipe_stdin('testsock');
+    $svc2->set_tie_stdin_to('testsock');
     $svc2->start;
     say_socket($sock => "iter1");
     ok $svc->is_starting, 's1 starting';

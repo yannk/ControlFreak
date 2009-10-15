@@ -31,7 +31,7 @@ use Object::Tiny qw{
     env
     cwd
     tags
-    pipe_stdin
+    tie_stdin_to
     ignore_stderr
     ignore_stdout
     start_secs
@@ -63,7 +63,7 @@ ControlFreak::Service - Object representation of a service.
     my $web = ControlFreak::Service->new(
         name => "fcgi",
         desc => "I talk http",
-        pipe_stdin => $fcgisock,
+        tie_stdin_to => $fcgisock,
         cmd => "/usr/bin/plackup -a MyApp -s FCGI",
     );
     $web->up;
@@ -601,9 +601,9 @@ sub set_start_secs {
     shift->_set('start_secs', $value);
 }
 
-sub set_pipe_stdin {
+sub set_tie_stdin_to {
     my $value = _STRING($_[1]) or return;
-    shift->_set('pipe_stdin', $value);
+    shift->_set('tie_stdin_to', $value);
 }
 
 sub set_ignore_stderr {
@@ -647,7 +647,7 @@ sub _run_cmd {
         "2>" => "/dev/null",
         ">"  => "/dev/null",
     );
-    if (my $sockname = $svc->pipe_stdin) {
+    if (my $sockname = $svc->tie_stdin_to) {
         my $socket = $ctrl->socket($sockname);
         if ($socket) {
             if ($socket->is_bound) {
