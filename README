@@ -1,11 +1,10 @@
-This is WORK IN PROGRESS - It doesn't work, please wait a few days
+This is WORK IN PROGRESS - The base works but is poorly documented,
+and it's not usable other than for testing, please if you are not
+a hacker, wait a few days. :)
 
 I'm still hacking on it.
 The documentation for the basic feature set is pretty
 much there though.
-
-It requires CVS version of AnyEvent (not released yet)
-
 
 INSTALLATION
 
