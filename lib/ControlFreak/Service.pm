@@ -520,6 +520,13 @@ sub assign_proxy {
     return 1;
 }
 
+sub assign_pid {
+    my $svc = shift;
+    my $pid = shift;
+    $svc->{pid} = $pid;
+    return;
+}
+
 sub _set {
     my $svc = shift;
     my ($attr, $value) = @_;
