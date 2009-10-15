@@ -81,6 +81,7 @@ sub start_service {
     my $name = $param->{name};
     my $cmd  = $param->{cmd};
     my $svc  = $proxy->{services}{$name};
+    my $ctrl = $proxy->{ctrl};
 
     my %stds = (
         "<"  => "/dev/null",
