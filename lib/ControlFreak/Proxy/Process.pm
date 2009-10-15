@@ -81,7 +81,6 @@ sub start_service {
     my $name = $param->{name};
     my $cmd  = $param->{cmd};
     my $svc  = $proxy->{services}{$name};
-    my $ctrl = $proxy->{ctrl};
 
     my %stds = (
         "<"  => "/dev/null",
@@ -89,13 +88,11 @@ sub start_service {
         "2>" => "/dev/null",
     );
     if (my $sockname = $param->{tie_stdin_to}) {
-        my $socket = $ctrl->socket($sockname);
-        $ctrl->log->debug( "Tying '$sockname' to stdin of '$name'" );
         if ( my $fd = $proxy->{sockets}{$sockname} ) {
             $stds{"<"} = $fd;
         }
         else {
-            $ctrl->log->error("'$sockname' not found in proxy" );
+            print STDERR "'$sockname' not found in proxy\n";
         }
     }
 
