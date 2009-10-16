@@ -155,7 +155,7 @@ sub start_service {
         tie_stdin_to  => $svc->tie_stdin_to,
     };
     my $string = encode_json($descr);
-    $hdl->push_write($string);
+    $hdl->push_write("$string\n");
 }
 
 sub stop_service {
@@ -174,7 +174,7 @@ sub stop_service {
         name    => $svc->name,
     };
     my $string = encode_json($descr);
-    $hdl->push_write($string);
+    $hdl->push_write("$string\n");
 }
 
 sub unset {

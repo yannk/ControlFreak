@@ -122,7 +122,7 @@ sub send_status {
         exit_status => $es,
     });
 
-    $proxy->{status_hdl}->push_write($string);
+    $proxy->{status_hdl}->push_write("$string\n");
 }
 
 sub sockets_from_env {
