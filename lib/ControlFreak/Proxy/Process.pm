@@ -84,12 +84,17 @@ sub start_service {
 
     my %stds = (
         "<"  => "/dev/null",
-        ">"  => "/dev/null",
-        "2>" => "/dev/null",
+#        ">"  => "/dev/null", ## TODO: error channels
+#        "2>" => "/dev/null",
     );
     if (my $sockname = $param->{tie_stdin_to}) {
         if ( my $fd = $proxy->{sockets}{$sockname} ) {
-            $stds{"<"} = $fd;
+            if (open $svc->{fh}, "<&=$fd") {
+                $stds{"<"} = $svc->{fh};
+            }
+            else {
+                print STDERR "couldn't open fd $fd: $!\n";
+            }
         }
         else {
             print STDERR "'$sockname' not found in proxy\n";
@@ -98,6 +103,7 @@ sub start_service {
 
     $svc->{cv} = AnyEvent::Util::run_cmd(
         $cmd,
+        close_all  => 1,
         '$$' => \$svc->{pid},
         %stds,
     );

@@ -4,6 +4,7 @@ use warnings;
 
 use AnyEvent::Util();
 use Carp;
+use Fcntl qw(F_GETFD F_SETFD FD_CLOEXEC);
 use JSON::XS;
 use Object::Tiny qw{ name cmd pid is_running };
 use Params::Util qw{ _ARRAY _STRING };
@@ -234,16 +235,39 @@ sub _set {
     return 1;
 }
 
+
+## open in the proxy process before exec
+sub prepare_child_fds {
+    my $proxy = shift;
+    my ($cr, $sw) = @_;
+
+    $proxy->no_close_on_exec($_) for ($cr, $sw);
+
+    $ENV{_CFK_COMMAND_FD} = fileno $cr;
+    $ENV{_CFK_STATUS_FD}  = fileno $sw;
+
+    $proxy->write_sockets_to_env;
+}
+
 sub write_sockets_to_env {
     my $proxy = shift;
 
     my $ctrl  = $proxy->{ctrl};
     for my $socket ($ctrl->sockets) {
         my $fh = $socket->fh or next;
+
+        $proxy->no_close_on_exec($fh);
         my $prefix = "_CFK_SOCK_";
         my $name = $prefix . $socket->name;
         $ENV{$name} = fileno $fh;
     }
+}
+
+sub no_close_on_exec {
+    my $proxy = shift;
+    my $fh =  shift;
+    my $flags = fcntl($fh, F_GETFD, 0);
+    fcntl($fh, F_SETFD, $flags & ~FD_CLOEXEC);
 }
 
 =head2 run
@@ -269,19 +293,14 @@ sub run {
 
     AnyEvent::Util::fh_nonblocking($_, 1) for ($sr, $cw);
 
-    my $crno = 3;
-    my $swno = 4;
-
     my $cmd = $proxy->cmd;
 
     $proxy->{proxy_cv} = AnyEvent::Util::run_cmd(
         $cmd,
-        "$crno>"   => $cr,
-        "$swno<"   => $sw,
         '$$'       => \$proxy->{pid},
         close_all  => 0,
         on_prepare => sub {
-            $proxy->write_sockets_to_env;
+            $proxy->prepare_child_fds($cr, $sw);
         },
     );
 

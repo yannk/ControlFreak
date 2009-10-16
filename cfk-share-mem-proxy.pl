@@ -14,8 +14,6 @@ use Pod::Usage;
 my %options;
 GetOptions(
     "p|preload=s"    => \$options{preload},
-    "c|command-fd=i" => \$options{'command-fd'},
-    "s|status-fd=i"  => \$options{'status-fd'},
 
     'h|help'         => \$options{help},
     'm|man'          => \$options{man},
@@ -28,8 +26,8 @@ croak "Please, specify a preload option" unless $options{preload};
 require $options{preload};
 croak "Error preloading: $@" if $@;
 
-my $cfd = $options{'command-fd'} || 3;
-my $sfd = $options{'status-fd'}  || 4;
+my $cfd = $ENV{_CFK_COMMAND_FD} or die "no command fd";
+my $sfd = $ENV{_CFK_STATUS_FD}  or die "no status fd";
 
 open my $cfh, "<&=$cfd"
     or die "Cannot open Command filehandle, is descriptor correct?";
