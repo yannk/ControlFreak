@@ -447,7 +447,7 @@ sub process_log {
         $ctrl->log->error("Cannot find svc '$svcname 'for proxy log");
         return;
     }
-    $ctrl->log->proxy_log([ $type, $svc, $msg ]);
+    $ctrl->log->proxy_svc_log([ $type, $svc, $msg ]);
 }
 
 =head2 has_stopped

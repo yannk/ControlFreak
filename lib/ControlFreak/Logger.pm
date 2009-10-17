@@ -81,7 +81,7 @@ for my $lvl (qw/trace debug info warn error fatal/) {
     }
 }
 
-sub proxy_log {
+sub proxy_svc_log {
     my $logger = shift;
     my ($data) = @_;
     my ($type, $svc, $msg) = @$data;
