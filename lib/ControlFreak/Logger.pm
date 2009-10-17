@@ -5,8 +5,8 @@ use warnings;
 use Carp;
 use Log::Log4perl();
 
-use Params::Util qw{ _STRING };
 use Object::Tiny qw{ config_file };
+use Params::Util qw{ _STRING };
 
 our $CURRENT_SVC_PID;
 
@@ -55,14 +55,22 @@ sub svc_watcher {
         my $msg = shift;
         return unless defined $msg;
         chomp $msg if $msg;
-        my $svcname = $svc->name;
-        ## for 'S' cspec
-        local $CURRENT_SVC_PID = $svc->pid;
-        my $log_handle = $logger->log_handle("service.$svcname.$type");
-        $log_handle->$logmethod($msg);
-        return;
+        return $logger->_svclog($logmethod, $type, $svc, $msg);
     };
     return $watcher_cb;
+}
+
+sub _svclog {
+    my $logger = shift;
+    my ($logmethod, $type, $svc, $msg) = @_;
+
+    my $svcname = $svc->name;
+    ## for 'S' cspec
+    local $CURRENT_SVC_PID = $svc->pid;
+    my $log_handle = $logger->log_handle("service.$svcname.$type");
+    chomp $msg if $msg;
+    $log_handle->$logmethod($msg);
+    return;
 }
 
 for my $lvl (qw/trace debug info warn error fatal/) {
@@ -76,11 +84,9 @@ for my $lvl (qw/trace debug info warn error fatal/) {
 sub proxy_log {
     my $logger = shift;
     my ($data) = @_;
-    my ($type, $svcname, $msg) = @$data;
-    my $log_handle = $logger->log_handle("service.$svcname.$type");
+    my ($type, $svc, $msg) = @$data;
     my $logmethod = $type eq 'err' ? 'error' : 'info';
-    chomp $msg if $msg;
-    $log_handle->$logmethod($msg);
+    $logger->_svclog($logmethod, $type, $svc, $msg);
 }
 
 sub set_config {
