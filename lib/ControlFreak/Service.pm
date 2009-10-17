@@ -113,6 +113,9 @@ sub new {
 
     $svc->{ctrl} = $param{ctrl}
         or croak "Service requires a controller";
+
+    $svc->{tags} ||= {};
+
     return $svc;
 }
 
@@ -559,6 +562,21 @@ sub unset {
     return 1;
 }
 
+=head2 tags
+
+Return a hashref of tags
+
+=head2 tag_list
+
+Return a reference to a list of tags
+
+=cut
+
+sub tag_list {
+    my $svc = shift;
+    return [ keys %{ $svc->tags } ];
+}
+
 sub set_cmd {
     my $value = (ref $_[1] ? _ARRAY($_[1]) : _STRING($_[1])) or return;
     shift->_set('cmd', $value);
@@ -588,7 +606,8 @@ sub set_desc {
 sub set_tags {
     my $value = _STRING($_[1]) or return;
     $value =~ s/\s+//g; ## no space in tags thanks
-    shift->_set('tags', $value);
+    my %hash_value = map { $_ => 1 } split (',', $value);
+    shift->_set('tags', \%hash_value);
 }
 
 sub set_stopwait_secs {

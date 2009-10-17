@@ -377,6 +377,12 @@ return the logger attached to the controller
 
 =cut
 
+sub services_by_tag {
+    my $ctrl = shift;
+    my $tag = shift;
+    return grep { $_->tags->{$tag} } $ctrl->services;
+}
+
 =head2 services_from_args(%param)
 
 Given a list of arguments (typically from the console commands)
@@ -415,7 +421,7 @@ sub services_from_args {
         return $svc ? ($svc) : ();
     }
     elsif ($selector eq 'tag') {
-        $err->("tags aren't supported yet");
+        return $ctrl->services_by_tag(shift @$args);
     }
     elsif ($selector eq 'all') {
         return $ctrl->services;
