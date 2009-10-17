@@ -50,6 +50,8 @@ my $proxy = ControlFreak::Proxy::Process->new(
     sockets     => $sockets,
 );
 
+$proxy->log('out', "$0 proxy started");
+
 AnyEvent->condvar->recv;
 
 __END__

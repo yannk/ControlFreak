@@ -442,12 +442,18 @@ sub process_log {
     my $ctrl = $proxy->{ctrl};
     my ($type, $svcname, $msg) = split ':', $log_data, 3;
 
+    if ($svcname && $svcname eq '-') {
+        ## this is a proxy log
+        $ctrl->log->proxy_log([ $type, $proxy, $msg ]);
+        return;
+    }
     my $svc = $ctrl->service($svcname);
     unless ($svc) {
         $ctrl->log->error("Cannot find svc '$svcname 'for proxy log");
         return;
     }
     $ctrl->log->proxy_svc_log([ $type, $svc, $msg ]);
+    return;
 }
 
 =head2 has_stopped

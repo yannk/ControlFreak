@@ -81,6 +81,19 @@ for my $lvl (qw/trace debug info warn error fatal/) {
     }
 }
 
+sub proxy_log {
+    my $logger = shift;
+    my ($data) = @_;
+    my ($type, $proxy, $msg) = @$data;
+
+    my $proxyname = $proxy->name;
+    my $logmethod = $type eq 'err' ? 'error' : 'info';
+
+    my $log_handle = $logger->log_handle("proxy.$proxyname.$type");
+    chomp $msg if $msg;
+    $log_handle->$logmethod($msg);
+}
+
 sub proxy_svc_log {
     my $logger = shift;
     my ($data) = @_;

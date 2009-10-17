@@ -28,6 +28,13 @@ sub new {
     return $proxy;
 }
 
+sub log {
+    my $proxy = shift;
+    my ($type, $msg) = @_;
+    my $pipe = $proxy->{log_hdl};
+    $pipe->push_write("$type:-:$msg\n");
+}
+
 sub init {
     my $proxy = shift;
     ## install the command watcher
@@ -57,7 +64,7 @@ sub init {
         );
     }
     else {
-        print STDERR "No proxy logging\n";
+        $proxy->log('err', "No proxy logging");
     }
 }
 
@@ -68,7 +75,7 @@ sub process_command {
     my $param = try {
         decode_json($command)
     } catch {
-        print STDERR "parse error in command $command: $_\n";
+        $proxy->log('err', "parse error in command $command: $_");
         return;
     };
     my $c = $param->{command};
@@ -79,8 +86,9 @@ sub process_command {
         $proxy->stop_service($param);
     }
     else {
-        print STDERR "couldn't understand command $command: $_\n";
+        $proxy->log('err', "couldn't understand command $command: $_");
     }
+    return;
 }
 
 sub xfer_log {
@@ -93,7 +101,7 @@ sub xfer_log {
         my $pipe = $proxy->{log_hdl};
         my $name = $svc->{name} || "";
         unless ($pipe) {
-            print STDERR "Log pipe to $name disconnected?\n";
+            $proxy->log('err', "Log pipe to $name disconnected?");
             return;
         }
         $pipe->push_write("$type:$name:$msg\n");
@@ -122,11 +130,11 @@ sub start_service {
                 $stds{"<"} = $svc->{fh};
             }
             else {
-                print STDERR "couldn't open fd $fd: $!\n";
+                $proxy->log('err', "couldn't open fd $fd: $!");
             }
         }
         else {
-            print STDERR "'$sockname' not found in proxy\n";
+            $proxy->log('err', "'$sockname' not found in proxy");
         }
     }
     unless ($svc->{ignore_stdout}) {
