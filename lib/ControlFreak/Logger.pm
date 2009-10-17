@@ -73,7 +73,17 @@ for my $lvl (qw/trace debug info warn error fatal/) {
     }
 }
 
-sub set_configfile {
+sub proxy_log {
+    my $logger = shift;
+    my ($data) = @_;
+    my ($type, $svcname, $msg) = @$data;
+    my $log_handle = $logger->log_handle("service.$svcname.$type");
+    my $logmethod = $type eq 'err' ? 'error' : 'info';
+    chomp $msg if $msg;
+    $log_handle->$logmethod($msg);
+}
+
+sub set_config {
     my $logger = shift;
     my $configfile = _STRING(shift)
         or return;

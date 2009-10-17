@@ -239,12 +239,13 @@ sub _set {
 ## open in the proxy process before exec
 sub prepare_child_fds {
     my $proxy = shift;
-    my ($cr, $sw) = @_;
+    my ($cr, $sw, $lw) = @_;
 
-    $proxy->no_close_on_exec($_) for ($cr, $sw);
+    $proxy->no_close_on_exec($_) for ($cr, $sw, $lw);
 
     $ENV{_CFK_COMMAND_FD} = fileno $cr;
     $ENV{_CFK_STATUS_FD}  = fileno $sw;
+    $ENV{_CFK_LOG_FD}     = fileno $lw;
 
     $proxy->write_sockets_to_env;
 }
@@ -287,20 +288,22 @@ sub run {
 
     $proxy->{is_running} = 1;
 
-    ## Command and Status pipes
+    ## Command, Status and Log pipes
     my ($cr, $cw) = AnyEvent::Util::portable_pipe;
     my ($sr, $sw) = AnyEvent::Util::portable_pipe;
+    my ($lr, $lw) = AnyEvent::Util::portable_pipe;
 
-    AnyEvent::Util::fh_nonblocking($_, 1) for ($sr, $cw);
+    AnyEvent::Util::fh_nonblocking($_, 1) for ($sr, $cw, $lr);
 
     my $cmd = $proxy->cmd;
 
+    ## XXX redir std /dev/null
     $proxy->{proxy_cv} = AnyEvent::Util::run_cmd(
         $cmd,
         '$$'       => \$proxy->{pid},
         close_all  => 0,
         on_prepare => sub {
-            $proxy->prepare_child_fds($cr, $sw);
+            $proxy->prepare_child_fds($cr, $sw, $lw);
         },
     );
 
@@ -325,11 +328,13 @@ sub run {
     });
     close $cr;
     close $sw;
+    close $lw;
 
     $proxy->{status_fh}   = $sr;
-    $proxy->{status_cv}   = AE::io $sr, 0, sub {
-        $proxy->read_status;
-    };
+    $proxy->{log_fh}      = $lr;
+    $proxy->{status_cv}   = AE::io $sr, 0, sub { $proxy->read_status };
+    $proxy->{log_cv}      = AE::io $lr, 0, sub { $proxy->read_log    };
+
     $proxy->{command_hdl} = AnyEvent::Handle->new(
         fh => $cw,
         on_error => sub {
@@ -369,8 +374,24 @@ sub shutdown {
 
     $proxy->{status_cv} = undef;
     $proxy->{status_fh} = undef;
+    $proxy->{log_cv}    = undef;
+    $proxy->{log_fh}    = undef;
     $ok->();
     return 1;
+}
+
+sub read_log {
+    my $proxy = shift;
+    my $log_fh = $proxy->{log_fh} or return;
+    my @logs;
+    while (<$log_fh>) {
+        push @logs, $_;
+    }
+    for (@logs) {
+        next unless $_;
+        $proxy->process_log($_);
+    }
+    return;
 }
 
 sub read_status {
@@ -412,6 +433,15 @@ sub process_status {
     else {
         $ctrl->log->fatal( "Unknown status '$status' sent to proxy '$pname'");
     }
+}
+
+sub process_log {
+    my $proxy = shift;
+    my $log_data = shift;
+
+    my $ctrl = $proxy->{ctrl};
+    my ($type, $svcname, $msg) = split ':', $log_data, 3;
+    $ctrl->log->proxy_log([ $type, $svcname, $msg ]);
 }
 
 =head2 has_stopped

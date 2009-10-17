@@ -50,6 +50,15 @@ sub init {
         #on_eof
         #on_error
     );
+
+    if ($proxy->{log_fh}) {
+        $proxy->{log_hdl} = AnyEvent::Handle->new(
+            fh => $proxy->{log_fh},
+        );
+    }
+    else {
+        print STDERR "No proxy logging\n";
+    }
 }
 
 sub process_command {
@@ -74,6 +83,25 @@ sub process_command {
     }
 }
 
+sub xfer_log {
+    my $proxy = shift;
+    my ($type, $svc) = @_;
+    my $watcher_cb = sub {
+        my $msg = shift;
+        return unless defined $msg;
+        chomp $msg if $msg;
+        my $pipe = $proxy->{log_hdl};
+        my $name = $svc->{name} || "";
+        unless ($pipe) {
+            print STDERR "Log pipe to $name disconnected?\n";
+            return;
+        }
+        $pipe->push_write("$type:$name:$msg\n");
+        return;
+    };
+    return $watcher_cb;
+}
+
 sub start_service {
     my $proxy = shift;
     my $param = shift;
@@ -81,11 +109,12 @@ sub start_service {
     my $name = $param->{name};
     my $cmd  = $param->{cmd};
     my $svc  = $proxy->{services}{$name};
+    $svc->{name} = $name; # intentional repeat
 
     my %stds = (
         "<"  => "/dev/null",
-#        ">"  => "/dev/null", ## TODO: error channels
-#        "2>" => "/dev/null",
+        ">"  => "/dev/null",
+        "2>" => "/dev/null",
     );
     if (my $sockname = $param->{tie_stdin_to}) {
         if ( my $fd = $proxy->{sockets}{$sockname} ) {
@@ -99,6 +128,12 @@ sub start_service {
         else {
             print STDERR "'$sockname' not found in proxy\n";
         }
+    }
+    unless ($svc->{ignore_stdout}) {
+        $stds{">"} = $proxy->xfer_log(out => $svc);
+    }
+    unless ($svc->{ignore_stderr} ) {
+        $stds{"2>"} = $proxy->xfer_log(err => $svc);
     }
 
     $svc->{cv} = AnyEvent::Util::run_cmd(

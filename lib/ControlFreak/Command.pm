@@ -237,8 +237,8 @@ sub process_logger {
 
     ## TBD: not sure if this should require privileges
     my $cmd  = $param{cmd};
-    my $ok   = $param{ok_cb} || sub {};
-    my $err  = $param{err_cb} || sub {};
+    my $ok   = $param{ok_cb}  ||= sub {};
+    my $err  = $param{err_cb} ||= sub {};
     my $ctrl = $param{ctrl};
 
     return $err->("empty logger") unless $cmd;
@@ -263,6 +263,7 @@ sub process_logger {
     ## attributes existence check
     my $meth = "set_$attr";
     my $h = $logger->can($meth);
+
     return $err->("invalid property '$attr'")
         unless $h;
 

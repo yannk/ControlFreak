@@ -184,6 +184,9 @@ sub load_config {
         file         => $ctrl->config_file,
         has_priv     => 1,
         fatal_errors => 1,
+        err_cb       => sub {
+            warn "error in config: " . ( $_[0] || "" );
+        },
     );
 }
 

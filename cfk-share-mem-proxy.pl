@@ -28,6 +28,7 @@ croak "Error preloading: $@" if $@;
 
 my $cfd = $ENV{_CFK_COMMAND_FD} or die "no command fd";
 my $sfd = $ENV{_CFK_STATUS_FD}  or die "no status fd";
+my $lfd = $ENV{_CFK_LOG_FD}     or die "no log fd";
 
 open my $cfh, "<&=$cfd"
     or die "Cannot open Command filehandle, is descriptor correct?";
@@ -35,13 +36,18 @@ open my $cfh, "<&=$cfd"
 open my $sfh, ">>&=$sfd"
     or die "Cannot open Status filehandle, is descriptor correct?";
 
-AnyEvent::Util::fh_nonblocking($_, 1) for ($cfh, $sfh);
+open my $lfh, ">>&=$lfd"
+    or die "Cannot open Status filehandle, is descriptor correct?";
+
+AnyEvent::Util::fh_nonblocking($_, 1) for ($cfh, $sfh, $lfh);
 
 my $sockets = ControlFreak::Proxy::Process->sockets_from_env;
+## FIXME: let Proxy::Process open the fd?
 my $proxy = ControlFreak::Proxy::Process->new(
-    command_fh => $cfh,
-    status_fh  => $sfh,
-    sockets    => $sockets,
+    command_fh  => $cfh,
+    status_fh   => $sfh,
+    log_fh      => $lfh,
+    sockets     => $sockets,
 );
 
 AnyEvent->condvar->recv;
