@@ -1,6 +1,7 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 73;
+use Test::More tests => 75;
+use Test::Exception;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -157,3 +158,11 @@ use_ok 'ControlFreak::Console';
     ok !$svc->fail_reason, "no fail reason, since we succeeded";
 }
 
+## Cannot creata a service with the name '-', it's special
+{
+    my $ctrl = ControlFreak->new();
+    my $svc = $ctrl->find_or_create_svc('-');
+    is $svc, undef, "forbidden";
+    $svc = ControlFreak::Service->new( name => '-' );
+    is $svc, undef, "forbidden";
+}
