@@ -15,6 +15,7 @@ use ControlFreak::Command;
 use ControlFreak::Logger;
 use ControlFreak::Service;
 use ControlFreak::Proxy;
+use File::Spec();
 use Params::Util qw{ _ARRAY _CODE };
 
 our $CRLF = "\015\012";
@@ -158,12 +159,18 @@ sub new {
     my %param = @_;
     my $ctrl = $class->SUPER::new(%param);
 
+    my $base = $ctrl->{base} = $param{base};
+
     $ctrl->{servicemap} = {};
     $ctrl->{socketmap}  = {};
     $ctrl->{proxymap}   = {};
 
+    my $log_config_file;
+    $log_config_file = File::Spec->rel2abs($param{log_config_file}, $base)
+        if defined $param{log_config_file};
+
     $ctrl->{log} = ControlFreak::Logger->new(
-        config_file => $param{log_config_file},
+        config_file => $log_config_file,
     );
 
     return $ctrl;

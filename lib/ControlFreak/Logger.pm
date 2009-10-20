@@ -104,8 +104,7 @@ sub proxy_svc_log {
 
 sub set_config {
     my $logger = shift;
-    my $configfile = _STRING(shift)
-        or return;
+    my $configfile = _STRING(shift) or return;
     ## reinit
     Log::Log4perl->init($configfile);
     return 1;
