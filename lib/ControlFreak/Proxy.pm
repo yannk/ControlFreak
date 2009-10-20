@@ -370,7 +370,9 @@ sub shutdown {
         kill 'TERM', $pid;
     }
     $proxy->{proxy_cv} = undef;
-    $proxy->has_stopped;
+
+    ## eventually mark it has dead
+    $proxy->{shutdown_cv} = AE::timer 3, 0, sub { $proxy->has_stopped(1) };
 
     $proxy->{status_cv} = undef;
     $proxy->{status_fh} = undef;
@@ -464,6 +466,18 @@ TBD
 
 sub has_stopped {
     my $proxy = shift;
+    my $finally = shift;
+
+    ## ignore if already dead
+    return unless $proxy->{is_running};
+
+    ## cancel timer
+    $proxy->{shutdown_cv} = undef;
+
+    if ($finally) {
+        my $pname = $proxy->name;
+        $proxy->{ctrl}->log->warn("Proxy '$pname' didn't clean after itself?");
+    }
     ## not running anymore, obviously
     $proxy->{is_running} = 0;
     $proxy->{pid} = undef;

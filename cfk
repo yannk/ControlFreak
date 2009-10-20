@@ -19,6 +19,7 @@ my %options;
 GetOptions(
     "c|config=s" => \$options{config},
     "d|daemon"   => \$options{daemon},
+    "t|trap"     => \$options{trap},
 
     'h|help'     => \$options{help},
     'm|man'      => \$options{man},
@@ -33,9 +34,11 @@ my $config_file = File::Spec->rel2abs($options{config}, $base);
 croak "Config file doesn't exist" unless -e $config_file;
 croak "Can't read config file"    unless -r $config_file;
 
+my $ctrl;
+
 daemonize() if $options{daemon};
 
-my $ctrl = ControlFreak->new( config_file => $config_file, base => $base );
+$ctrl = ControlFreak->new( config_file => $config_file, base => $base );
 $ctrl->load_config;
 
 if ($ctrl->console) {
@@ -76,6 +79,22 @@ sub daemonize {
     open(STDIN,  "+>/dev/null");
     open(STDOUT, "+>&STDIN");
     open(STDERR, "+>&STDIN");
+
+    trap_sigs();
+}
+
+sub trap_sigs {
+    ## catch signals
+    $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
+        my $sig = shift;
+        return unless $ctrl;
+        $ctrl->log->error("Got signal $sig");
+        return if $options{trap};
+        $ctrl->shutdown;
+        $SIG{TERM} = 'IGNORE';
+        kill 'TERM', -(getpgrp 0); ## kill our group
+        exit;
+    };
 }
 
 __END__
@@ -93,6 +112,7 @@ Options:
  -c, --config=<file>  Path to a configuration file to use
 
  -d, --daemon         Run as a daemon
+ -t, --trap           Trap and ignore normal signals (ignored unless -d)
  -h, --help           Help
  -m, --man            More help
 

@@ -284,12 +284,15 @@ sub stop {
     my $err = $param{err_cb} ||= sub {};
     my $ok  = $param{ok_cb}  ||= sub {};
 
+
     my $svcname = $svc->name || "unnamed service";
     return $svc->_err(%param, "Service '$svcname' is already down")
         if $svc->is_down;
 
     return $svc->_err(%param, "Service '$svcname' lost its pid")
         unless $svc->pid;
+
+    $svc->{ctrl}->log->info("Stopping service '$svcname'");
 
     ## there is a slight race condition here, since the child
     ## might have died just before we send the TERM signal, but
@@ -383,15 +386,16 @@ service has stopped, no matter what the current status is.
 ## FIXME name
 sub has_stopped {
     my $svc = shift;
-    my $reason = shift;
+    my $reason = shift || "";
     return if $svc->is_down;
 
     my $name = $svc->name;
+    $reason = "'$name' has stopped: $reason";
     $svc->{state} = 'fail';
     $svc->{stop_time} = time;
     $svc->{normal_exit} = undef;
     $svc->{child_cv} = undef;
-    $svc->{ctrl}->log->info($reason || "'$name' has stopped");
+    $svc->{ctrl}->log->info($reason);
     return 1;
 }
 

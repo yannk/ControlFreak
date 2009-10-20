@@ -324,6 +324,11 @@ sub remove_proxy {
     return delete $ctrl->{proxymap}->{$proxy_name};
 }
 
+sub proxies {
+    my $ctrl = shift;
+    return values %{ $ctrl->{proxymap} };
+}
+
 =head2 find_or_create_svc($name)
 
 Given a service name in parameter (a string), searches for an existing
@@ -575,6 +580,20 @@ sub command_bind {
     $sock->bind();
     $ok->();
     return;
+}
+
+=head2 shutdown
+
+cleanly exit all running commands, close all sockets etc...
+
+=cut
+
+sub shutdown {
+    my $ctrl = shift;
+
+    $_->down     for $ctrl->services;
+    $_->shutdown for $ctrl->proxies;
+    $_->unbind   for $ctrl->sockets;
 }
 
 =head1 AUTHOR
