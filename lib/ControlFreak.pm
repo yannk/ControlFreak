@@ -532,13 +532,23 @@ sub command_desc {
     $ok->(join "\n", @out);
 }
 
+#sub command_warn {
+#    warn "I told you!";
+#}
+
+#sub command_die {
+#    die "really? :(";
+#}
+
 sub command_status {
     my $ctrl = shift;
     my %param = @_;
 
     my $ok   = _CODE($param{ok_cb}) || sub {};
-    my @svcs = $ctrl->services_from_args(%param);
-    @svcs    = $ctrl->services unless @svcs;
+
+    my $args = $param{args} || [ 'all' ];
+    $args = ['all'] unless @$args;
+    my @svcs = $ctrl->services_from_args(%param, args => $args);
 
     my @out;
     for (@svcs) {

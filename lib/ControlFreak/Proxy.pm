@@ -170,6 +170,11 @@ sub stop_service {
         unless $proxy->is_running;
 
     my $hdl = $proxy->{command_hdl};
+    unless ($hdl) {
+        ## TODO: cleanup?
+        $proxy->{ctrl}->log->error("proxy '$pname' is gone");
+        return;
+    }
     my $descr = {
         command => 'stop',
         name    => $svc->name,
