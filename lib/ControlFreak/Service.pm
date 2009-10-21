@@ -468,6 +468,15 @@ sub restart {
     die "snif";
 }
 
+sub proxy_as_text {
+    my $svc = shift;
+    my $proxy = $svc->{proxy};
+    return "" unless $proxy;
+    my $name = $proxy->name || "";
+    my $status = $proxy->is_running ? "" : "!";
+    return "$name$status";
+}
+
 =head2 status_as_text
 
 Return a text describing the service state.
@@ -485,6 +494,8 @@ It consists in tab separated list of fields:
 
 =item * stop_time
 
+=item * proxy, prefixed with '!' if down
+
 =item * fail_reason
 
 =item * running_cmd
@@ -496,7 +507,8 @@ It consists in tab separated list of fields:
 sub status_as_text {
     my $svc = shift;
     return join "\t", map { $svc->$_ || "" }
-           qw/name state pid start_time stop_time fail_reason running_cmd/;
+           qw/name state pid start_time stop_time proxy_as_text
+              fail_reason running_cmd/;
 }
 
 =head2 desc_as_text
