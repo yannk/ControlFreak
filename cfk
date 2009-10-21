@@ -95,6 +95,14 @@ sub trap_sigs {
         kill 'TERM', -(getpgrp 0); ## kill our group
         exit;
     };
+    $SIG{__DIE__} = sub {
+        my $error = shift || "";
+        $ctrl->log->fatal($error);
+    };
+    $SIG{__WARN__} = sub {
+        my $warn = shift;
+        $ctrl->log->warn($warn);
+    }
 }
 
 __END__
