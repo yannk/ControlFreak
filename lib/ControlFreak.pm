@@ -599,7 +599,7 @@ sub command_killll {
     ## might not stay in the future
     my $ctrl = shift;
     $ctrl->shutdown;
-    exit;
+    $ctrl->{exit_cv} = AE::timer 1, 0, sub { exit };
 }
 
 =head2 shutdown
