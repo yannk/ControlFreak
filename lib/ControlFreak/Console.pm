@@ -107,7 +107,7 @@ sub accept_connection {
     my $get_admin_cmd; $get_admin_cmd = sub {
         my ($h, $line) = @_;
         if (lc $line eq 'exit') {
-            $console->{ctrl}->log->info( "exiting" );
+            $console->{ctrl}->log->info( "Console exiting" );
             $h->on_drain(sub {
                 delete $console->{handles}{$h};
                 $h->destroy;

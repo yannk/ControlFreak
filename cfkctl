@@ -38,7 +38,7 @@ else {
     croak "Sorry unknown command $command";
 }
 
-$socket->close;
+$commander->exit;
 
 ## I'm pretty sure this doesn't work in AF_INET6
 sub get_sock_from_addr {
@@ -187,6 +187,12 @@ sub parse_svcs {
         }
     }
     return @parsed;
+}
+
+sub exit {
+    my $commander = shift;
+    $commander->send_request("exit");
+    $commander->{socket}->close;
 }
 
 __END__
