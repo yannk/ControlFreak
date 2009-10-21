@@ -94,11 +94,12 @@ sub accept_connection {
     my $hdl; $hdl = AnyEvent::Handle->new(
         fh       => $fh,
         on_eof   => sub {
-            $console->{ctrl}->log->info("client connection: eof");
+            $console->{ctrl}->log->info("Console connection: eof");
             $hdl->destroy;
         },
         on_error => sub {
-            $console->{ctrl}->log->error("Client connection error: $!");
+            $console->{ctrl}->log->error("Console connection error: $!");
+            $hdl->destroy;
         },
     );
     $console->{handles}{$hdl} = $hdl;
