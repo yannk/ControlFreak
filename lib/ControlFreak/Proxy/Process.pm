@@ -116,8 +116,12 @@ sub start_service {
 
     my $name = $param->{name};
     my $cmd  = $param->{cmd};
-    my $svc  = $proxy->{services}{$name};
+
+    my $svc  = {};
     $svc->{name} = $name; # intentional repeat
+    $proxy->{services}{$name} = $svc;
+
+    $proxy->log('out', "starting $name");
 
     my %stds = (
         "<"  => "/dev/null",
@@ -159,6 +163,26 @@ sub start_service {
         $proxy->send_status('stopped', $name, $pid, $es);
         $svc->{pid} = undef;
     });
+}
+
+sub stop_service {
+    my $proxy = shift;
+    my $param = shift;
+
+    my $svcname = $param->{name};
+
+    $proxy->log('out', "stopping $svcname");
+    my $svc = $proxy->{services}{$svcname};
+    unless ($svc) {
+        $proxy->log('err', "Oops, I don't know about '$svcname'");
+        return;
+    }
+    my $pid = $svc->{pid};
+    unless ($pid) {
+        $proxy->log('err', "no pid for '$svcname'");
+        return;
+    }
+    kill 'TERM' => $pid;
 }
 
 sub send_status {

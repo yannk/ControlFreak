@@ -420,6 +420,8 @@ sub process_status {
     my $json_data = shift;
 
     my $ctrl = $proxy->{ctrl};
+    $ctrl->log->debug("Got a new status: $json_data");
+
     my $data = decode_json($json_data);
 
     my $pname  = $proxy->name;
@@ -456,7 +458,8 @@ sub process_log {
     }
     my $svc = $ctrl->service($svcname);
     unless ($svc) {
-        $ctrl->log->error("Cannot find svc '$svcname 'for proxy log");
+        $svcname ||= "";
+        $ctrl->log->error("Cannot find svc '$svcname 'for proxy log: $log_data");
         return;
     }
     $ctrl->log->proxy_svc_log([ $type, $svc, $msg ]);
