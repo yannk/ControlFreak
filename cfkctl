@@ -38,6 +38,8 @@ else {
     croak "Sorry unknown command $command";
 }
 
+$socket->close;
+
 ## I'm pretty sure this doesn't work in AF_INET6
 sub get_sock_from_addr {
     my $address = shift;
