@@ -4,8 +4,12 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
+use Carp;
+use IO::Socket::INET;
+use IO::Socket::UNIX;
+use Socket qw(SOCK_STREAM);
 
-my %options;
+my %options = ( address => "tcp://127.0.0.1:11311" );
 
 GetOptions(
     'y|yes'      => \$options{yes},
@@ -19,7 +23,169 @@ pod2usage(1)             if $options{help};
 pod2usage(-verbose => 2) if $options{man};
 
 my $command = shift;
-my @svcrefs = @ARGV;
+
+my $socket = get_sock_from_addr($options{address})
+    or croak "Cannot get a socket for '$options{address}'";
+
+my $cmd = "cmd_$command";
+
+my $commander = ControlFreak::Commander->new( $socket );
+
+if (my $coderef = $commander->can($cmd)) {
+    $coderef->($commander, @ARGV);
+}
+else {
+    croak "Sorry unknown command $command";
+}
+
+## I'm pretty sure this doesn't work in AF_INET6
+sub get_sock_from_addr {
+    my $address = shift;
+    if ($address =~ m!^tcp://(.+)!) {
+        my $peer = $1;
+        $peer =~ s{/+$}{};
+        my $sock = IO::Socket::INET->new(
+            PeerAddr => $peer,
+            Proto    => 'tcp',
+        );
+        return unless $sock;
+        $sock->autoflush(1);
+        return $sock;
+    }
+    elsif ($address =~ m!^unix://(.+)!) {
+        return IO::Socket::UNIX->new(
+            Type => SOCK_STREAM,
+            Peer => "/$1",
+        );
+    }
+    else {
+        return;
+    }
+}
+
+package ControlFreak::Commander;
+use strict;
+use warnings;
+use Socket qw($CRLF);
+use Carp;
+
+sub new { bless { 'socket' => $_[1] }, $_[0] };
+
+sub send_request {
+    my $commander = shift;
+    my $request = shift;
+    my $socket = $commander->{socket};
+    $socket->print("$request$CRLF");
+}
+
+sub cmd_list {
+    my $commander = shift;
+    $commander->send_request("command list");
+    my ($error, $response) = $commander->read_response;
+    croak "error: $error" if $error;
+    for (@$response) {
+        print "$_\n";
+    }
+}
+
+sub cmd_status {
+    my $commander = shift;
+    my @args      = parse_svcs(@_);
+
+    my %statuses;
+    @args = ('all') unless @args;
+    for (@args) {
+        $commander->send_request("command status $_");
+        my ($error, $response) = $commander->read_response;
+        if ($error) {
+            warn "error: $error";
+            next;
+        }
+        $commander->parse_statuses($response, \%statuses);
+    }
+    for my $svcname (keys %statuses) {
+        print "$svcname $statuses{$svcname}\n"
+    }
+}
+
+sub parse_statuses {
+    my $commander = shift;
+    my ($response, $statuses) = @_;
+
+    for (@$response) {
+       my ($svcname, $rest) = split /\s/, $_, 2;
+       next if defined $statuses->{$svcname};
+       $statuses->{$svcname} = $rest;
+    }
+}
+
+sub cmd_desc {
+    my $commander = shift;
+    $commander->send_request("command desc");
+    my ($error, $response) = $commander->read_response;
+    croak "error: $error" if $error;
+    for (@$response) {
+        print "$_\n";
+    }
+}
+
+sub cmd_up      { _cmd_svc( "up",      @_ ) }
+sub cmd_down    { _cmd_svc( "down",    @_ ) }
+sub cmd_stop    { _cmd_svc( "stop",    @_ ) }
+sub cmd_start   { _cmd_svc( "start",   @_ ) }
+sub cmd_restart { _cmd_svc( "restart", @_ ) }
+
+sub _cmd_svc {
+    my $command   = shift;
+    my $commander = shift;
+    my @svcrefs   = @_;
+
+    my @arguments = parse_svcs(@svcrefs);
+    for (@arguments) {
+        $commander->send_request("command $command $_");
+        my ($error) = $commander->read_response;
+        if ($error) {
+            croak "error: $error";
+        }
+    }
+}
+
+sub read_response {
+    my $commander = shift;
+    my $socket = $commander->{socket};
+    my @response;
+    my $error;
+    while (<$socket>) {
+        last unless defined;
+        last if /^OK$CRLF/;
+        if (/^ERROR: (.*)$CRLF/) {
+            $error = $1;
+            last;
+        }
+        chomp;
+        push @response, $_;
+    }
+    return ($error, \@response);
+}
+
+sub parse_svcs {
+    my @args = @_;
+
+    my @parsed;
+
+    for (@args) {
+        if ($_ eq 'all') {
+            return ('all');
+        }
+        if (/^@(.*)$/) {
+            push @parsed, "tag $1";
+        }
+        else {
+            push @parsed, "service $_";
+        }
+    }
+    return @parsed;
+}
 
 __END__
 
@@ -50,7 +216,6 @@ cfkctl [options] command [svcref ...]
     all                 All known services [default]
     svcname             A string of the name of the service
     @tag                All services tagged with the tag C<tag>
-    :status             All services of status C<status>
 
   List of statuses:
     up
@@ -80,8 +245,13 @@ one one server.
     ## make sure all webs are up (FastCGI processes for instance)
     cfkctl up @webs
 
-    ## start yuidd once but don't attempt to resuscitate if failed
-    cfkctl once yuidd # Implementation??
+    ## list all services
+    cfkctl list
+
+    ## status of some services
+    cfkctl status
+    cfkctl status @webs
+    cfkctl status s1
 
     ## remove a service reference completely
     cfkctl destroy syncer
