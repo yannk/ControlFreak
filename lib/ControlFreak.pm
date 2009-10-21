@@ -594,7 +594,7 @@ sub command_bind {
     return;
 }
 
-sub command_shutdown {
+sub command_killll {
     ## I'm tired of killing my procs.
     ## might not stay in the future
     my $ctrl = shift;
