@@ -536,8 +536,10 @@ sub command_status {
     my $ctrl = shift;
     my %param = @_;
 
-    my $ok = _CODE($param{ok_cb}) || sub {};
-    my @svcs = $ctrl->services;
+    my $ok   = _CODE($param{ok_cb}) || sub {};
+    my @svcs = $ctrl->services_from_args(%param);
+    @svcs    = $ctrl->services unless @svcs;
+
     my @out;
     for (@svcs) {
         push @out, $_->status_as_text;
@@ -580,6 +582,14 @@ sub command_bind {
     $sock->bind();
     $ok->();
     return;
+}
+
+sub command_shutdown {
+    ## I'm tired of killing my procs.
+    ## might not stay in the future
+    my $ctrl = shift;
+    $ctrl->shutdown;
+    exit;
 }
 
 =head2 shutdown
