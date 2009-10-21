@@ -577,7 +577,7 @@ Return a reference to a list of tags
 
 sub tags_as_text {
     my $svc = shift;
-    return join ", ", $svc->tag_list;
+    return join ", ", @{ $svc->tag_list };
 
 }
 
