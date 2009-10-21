@@ -518,8 +518,7 @@ It consists in tab separated list of fields:
 
 sub desc_as_text {
     my $svc = shift;
-    return join "\t", map { $svc->$_ || "" }
-           qw/name tags desc/;
+    return join "\t", map { $svc->$_ || "" } qw/name tags_as_text desc/;
 }
 
 sub assign_proxy {
@@ -575,6 +574,12 @@ Return a hashref of tags
 Return a reference to a list of tags
 
 =cut
+
+sub tags_as_text {
+    my $svc = shift;
+    return join ", ", $svc->tag_list;
+
+}
 
 sub tag_list {
     my $svc = shift;
