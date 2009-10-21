@@ -100,10 +100,6 @@ sub xfer_log {
         chomp $msg if $msg;
         my $pipe = $proxy->{log_hdl};
         my $name = $svc->{name} || "";
-        unless ($pipe) {
-            $proxy->log('err', "Log pipe to $name disconnected?");
-            return;
-        }
         $pipe->push_write("$type:$name:$msg\n");
         return;
     };
@@ -172,8 +168,6 @@ sub stop_service {
 
     my $svcname = $param->{name};
 
-    $proxy->log('out', "stopping $svcname");
-
     my $svc = $proxy->{services}{$svcname};
     unless ($svc) {
         $proxy->log('err', "Oops, I don't know about '$svcname'");
@@ -186,6 +180,7 @@ sub _stop_service {
     my $proxy = shift;
     my $svc = shift;
     my $pid = $svc->{pid};
+    $proxy->log('out', "stopping $svc->{name}");
     unless ($pid) {
         $proxy->log('err', "no pid for '$svc->{name}'");
         return;

@@ -378,15 +378,9 @@ sub shutdown {
     if (my $pid = $proxy->pid) {
         kill 'TERM', $pid;
     }
-    $proxy->{proxy_cv} = undef;
-
     ## eventually mark it has dead
     $proxy->{shutdown_cv} = AE::timer 3, 0, sub { $proxy->has_stopped(1) };
 
-    $proxy->{status_cv} = undef;
-    $proxy->{status_fh} = undef;
-    $proxy->{log_cv}    = undef;
-    $proxy->{log_fh}    = undef;
     $ok->();
     return 1;
 }
@@ -494,6 +488,12 @@ sub has_stopped {
     ## not running anymore, obviously
     $proxy->{is_running} = 0;
     $proxy->{pid} = undef;
+
+    $proxy->{proxy_cv} = undef;
+    $proxy->{status_cv} = undef;
+    $proxy->{status_fh} = undef;
+    $proxy->{log_cv}    = undef;
+    $proxy->{log_fh}    = undef;
 
     ## no matter what, clean the mess
     for my $svc ($proxy->services) {

@@ -66,7 +66,7 @@ sub trap_sigs {
             $proxy->log("err", "Got signal $sig");
             $proxy->shutdown;
         }
-        exit;
+        exit 0;
     };
     $SIG{__WARN__} = sub {
         my $warn = shift || "";
@@ -76,6 +76,7 @@ sub trap_sigs {
         my $reason = shift || "";
         return if $^S;
         $proxy->log("err", "die $reason") if $proxy;
+        exit -1;
     };
 }
 
