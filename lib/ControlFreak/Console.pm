@@ -134,7 +134,6 @@ sub accept_connection {
     };
 
     $hdl->push_read( line => $get_admin_cmd );
-    $hdl->push_write("cfkcon>$CRLF");
 }
 
 =head1 AUTHOR
