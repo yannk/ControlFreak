@@ -4,6 +4,7 @@ use warnings;
 
 use AnyEvent::Util();
 use Carp;
+use ControlFreak::Util;
 use Fcntl qw(F_GETFD F_SETFD FD_CLOEXEC);
 use JSON::XS;
 use Object::Tiny qw{ name cmd pid is_running };
@@ -326,7 +327,10 @@ sub run {
             $proxy->{ctrl}->log->info("proxy '$name' gracefully killed");
         }
         else {
-            $proxy->{ctrl}->log->info("proxy '$name' abnormal termination");
+            my $r = ControlFreak::Util::exit_reason($es);
+            $proxy->{ctrl}->log->info(
+                "proxy '$name' abnormal termination " . $r
+            );
         }
 
         $proxy->has_stopped;
@@ -450,6 +454,7 @@ sub process_log {
 
     my $ctrl = $proxy->{ctrl};
     my ($type, $svcname, $msg) = split ':', $log_data, 3;
+        $ctrl->log->debug("log: $log_data");
 
     if ($svcname && $svcname eq '-') {
         ## this is a proxy log

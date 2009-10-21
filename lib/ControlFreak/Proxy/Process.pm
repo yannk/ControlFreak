@@ -31,7 +31,7 @@ sub new {
 sub log {
     my $proxy = shift;
     my ($type, $msg) = @_;
-    my $pipe = $proxy->{log_hdl};
+    my $pipe = $proxy->{log_hdl} or return;
     $pipe->push_write("$type:-:$msg\n");
 }
 
@@ -162,6 +162,7 @@ sub start_service {
         my $pid = $svc->{pid};
         $proxy->send_status('stopped', $name, $pid, $es);
         $svc->{pid} = undef;
+        delete $proxy->{services}{$name};
     });
 }
 
@@ -172,14 +173,21 @@ sub stop_service {
     my $svcname = $param->{name};
 
     $proxy->log('out', "stopping $svcname");
+
     my $svc = $proxy->{services}{$svcname};
     unless ($svc) {
         $proxy->log('err', "Oops, I don't know about '$svcname'");
         return;
     }
+    $proxy->_stop_service($svc);
+}
+
+sub _stop_service {
+    my $proxy = shift;
+    my $svc = shift;
     my $pid = $svc->{pid};
     unless ($pid) {
-        $proxy->log('err', "no pid for '$svcname'");
+        $proxy->log('err', "no pid for '$svc->{name}'");
         return;
     }
     kill 'TERM' => $pid;
@@ -207,6 +215,13 @@ sub sockets_from_env {
         $sockets->{$1} = $ENV{$_};
     }
     return $sockets;
+}
+
+sub shutdown {
+    my $proxy = shift;
+    for my $svc (values %{ $proxy->{services} }) {
+        $proxy->_stop_service($svc);
+    }
 }
 
 1;

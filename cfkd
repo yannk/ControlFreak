@@ -97,6 +97,7 @@ sub trap_sigs {
     };
     $SIG{__DIE__} = sub {
         my $error = shift || "";
+        return if $^S;
         $ctrl->log->fatal($error);
     };
     $SIG{__WARN__} = sub {

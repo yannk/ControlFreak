@@ -236,20 +236,7 @@ Returns a string with the reason of the failure, or undef.
 sub fail_reason {
     my $svc = shift;
     return unless $svc->is_fail;
-    my $status = $svc->{exit_status};
-
-    my $exit_status = POSIX::WEXITSTATUS($status);
-    my $signal      = POSIX::WTERMSIG($status);
-
-    my ($exit, $sig);
-    if (POSIX::WIFEXITED($status)) {
-        $exit = $exit_status
-              ? "Exited with error $exit_status"
-              : "Exited successfuly";
-    }
-
-    $sig = "Received signal $signal" if POSIX::WIFSIGNALED($status);
-    return join " - ", grep { $_ } ($exit, $sig);
+    return ControlFreak::Util::exit_reason( $svc->{exit_status} );
 }
 
 =head2 stop(%param)

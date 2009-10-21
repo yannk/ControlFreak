@@ -11,6 +11,8 @@ use ControlFreak::Proxy::Process;
 use Carp;
 use Pod::Usage;
 
+my $proxy;
+
 my %options;
 GetOptions(
     "p|preload=s"    => \$options{preload},
@@ -41,9 +43,11 @@ open my $lfh, ">>&=$lfd"
 
 AnyEvent::Util::fh_nonblocking($_, 1) for ($cfh, $sfh, $lfh);
 
+trap_sigs();
+
 my $sockets = ControlFreak::Proxy::Process->sockets_from_env;
 ## FIXME: let Proxy::Process open the fd?
-my $proxy = ControlFreak::Proxy::Process->new(
+$proxy = ControlFreak::Proxy::Process->new(
     command_fh  => $cfh,
     status_fh   => $sfh,
     log_fh      => $lfh,
@@ -53,6 +57,27 @@ my $proxy = ControlFreak::Proxy::Process->new(
 $proxy->log('out', "$0 proxy started");
 
 AnyEvent->condvar->recv;
+
+
+sub trap_sigs {
+    $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
+        my $sig = shift;
+        if ($proxy) {
+            $proxy->log("err", "Got signal $sig");
+            $proxy->shutdown;
+        }
+        exit;
+    };
+    $SIG{__WARN__} = sub {
+        my $warn = shift || "";
+        $proxy->log("err", "warn $warn") if $proxy;
+    };
+    $SIG{__DIE__} = sub {
+        my $reason = shift || "";
+        return if $^S;
+        $proxy->log("err", "die $reason") if $proxy;
+    };
+}
 
 __END__
 
