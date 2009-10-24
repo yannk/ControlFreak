@@ -246,6 +246,21 @@ sub cmd_pid {
     return;
 }
 
+sub cmd_pids {
+    my $commander = shift;
+    my @svcrefs   = @_;
+    @svcrefs = ('all') unless @svcrefs;
+    my @arguments = parse_svcs(@svcrefs);
+    my %st;
+    for (@arguments) {
+        $commander->send_status_req($_, \%st);
+    }
+    for my $svcname (keys %st) {
+        my $pid = $st{$svcname}{pid} || "";
+        print "$svcname: $pid\n";
+    }
+}
+
 sub cmd_up      { _cmd_svc( "up",      @_ ) }
 sub cmd_down    { _cmd_svc( "down",    @_ ) }
 sub cmd_stop    { _cmd_svc( "stop",    @_ ) }
