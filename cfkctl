@@ -77,7 +77,6 @@ our $can_color;
 
 BEGIN {
     $has_datetime = eval "use DateTime; 1";
-    warn ($@) if $@;
     $has_ansi     = eval "use Term::ANSIColor; 1";
     $can_color    = -t STDOUT;
 };
@@ -94,6 +93,16 @@ sub send_request {
 sub cmd_list {
     my $commander = shift;
     $commander->send_request("command list");
+    my ($error, $response) = $commander->read_response;
+    croak "error: $error" if $error;
+    for (@$response) {
+        print "$_\n";
+    }
+}
+
+sub cmd_version {
+    my $commander = shift;
+    $commander->send_request("command version");
     my ($error, $response) = $commander->read_response;
     croak "error: $error" if $error;
     for (@$response) {
