@@ -83,6 +83,7 @@ sub process_ok {
     ok $svc->is_starting, "service is starting";
     ok $proxy->is_running, "proxy is running";
     $proxy->shutdown;
+    wait_for (sub { $svc->is_down });
     ok $svc->is_fail or diag $svc->state;
 }
 
