@@ -39,10 +39,13 @@ use_ok 'ControlFreak::Console';
 
     my $clhdl; $clhdl = AnyEvent::Handle->new (
         connect => [$host, $port],
-        on_connect => sub { ok "1", "connected" },
+        on_connect => sub {
+            ok "1", "connected";
+            $clhdl->push_write("command status\015\012");
+        },
         on_eof => sub { $cv->send },
     );
-    $clhdl->push_read(sub { ok 1, "read "; $cv->send });
+    $clhdl->push_read(line => sub { ok 1, "read $_[1]"; $cv->send });
     $cv->recv;
 }
 
