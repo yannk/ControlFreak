@@ -71,6 +71,17 @@ use warnings;
 use Socket qw($CRLF);
 use Carp;
 
+our $has_datetime;
+our $has_ansi;
+our $can_color;
+
+BEGIN {
+    $has_datetime = eval "use DateTime; 1";
+    warn ($@) if $@;
+    $has_ansi     = eval "use Term::ANSIColor; 1";
+    $can_color    = -t STDOUT;
+};
+
 sub new { bless { 'socket' => $_[1] }, $_[0] };
 
 sub send_request {
@@ -106,7 +117,34 @@ sub cmd_status {
         $commander->parse_statuses($response, \%statuses);
     }
     for my $svcname (keys %statuses) {
-        print "$svcname $statuses{$svcname}\n"
+        my %st = %{$statuses{$svcname}};
+        my ($uptime, $time);
+        if ($st{start_time} && $st{stop_time}) {
+            if ($st{start_time} >= $st{stop_time}) {
+                $uptime = $st{uptime};
+                $time   = $st{start_time};
+            }
+            else {
+                $uptime = $st{downtime};
+                $time   = $st{stop_time};
+            }
+        }
+        elsif ($st{start_time}) {
+            $uptime = $st{uptime};
+            $time   = $st{start_time};
+        }
+        elsif ($st{stop_time}) {
+            $uptime = $st{downtime};
+            $time   = $st{stop_time};
+        }
+
+        $uptime ||= "";
+        $time   ||= "";
+        printf "%-8s %-20s %15s (%s)\n",
+            $statuses{$svcname}{status},
+            $svcname,
+            $uptime,
+            $time;
     }
 }
 
@@ -114,11 +152,70 @@ sub parse_statuses {
     my $commander = shift;
     my ($response, $statuses) = @_;
 
-    for (@$response) {
-       my ($svcname, $rest) = split /\s/, $_, 2;
-       next if defined $statuses->{$svcname};
-       $statuses->{$svcname} = $rest;
+    my $do_color  = $can_color && $has_ansi;
+
+    for (reverse @$response) {
+        my %st;
+        @st{ qw/svcname status pid start_time stop_time
+                proxy fail_reason running_cmd/ } = split /\t/, $_;
+
+        ## remove duplicates
+        next if defined $statuses->{ $st{svcname} };
+
+        my $status = $st{status};
+        my $string_status = $status;
+        if ($do_color) {
+            my $color;
+            $color = "bold green"  if $status =~ /(starting|running)/;
+            $color = "bold yellow" if $status =~ /(stopping|stopped)/;
+            $color = "bold red"    if $status =~ /(fail|backoff|fatal)/;
+            $string_status = color($color) . $status . color('reset');
+        }
+        my $name = $st{svcname};
+        $statuses->{$name} = \%st;
+
+        $statuses->{$name}{status}     = $string_status;
+        $statuses->{$name}{uptime}     = _reltime( $st{start_time} );
+        $statuses->{$name}{downtime}   = _reltime( $st{stop_time}  );
+        $statuses->{$name}{start_time} = scalar localtime( $st{start_time} )
+            if $st{start_time};
+        $statuses->{$name}{stop_time}  = scalar localtime( $st{stop_time} )
+            if $st{stop_time};
     }
+}
+
+sub _reltime {
+    my $time = shift;
+    return unless $time;
+    return unless $has_datetime;
+    my $now  = DateTime->now(time_zone => 'floating');
+    my $past = DateTime->from_epoch( epoch => $time, time_zone => 'floating' );
+
+    my $today = $now->truncate(to => 'days')->add( days => 1 );
+
+    my $days  = $today - $past;
+    my $ddur  = $days->in_units('days');
+
+    if ( $ddur > 2 ) {
+        return sprintf "%2d days ago", $ddur;
+    }
+    elsif ( $ddur <= 1 ) {
+        my $dur = $now - $past;
+        my $hdur = $dur->in_units('hours');
+        if ($hdur > 1) {
+            return sprintf "%2d hours ago", $hdur;
+        }
+        my $mdur = $dur->in_units('minutes');
+        if ($mdur > 1) {
+            return sprintf "%2d minutes ago", $mdur;
+        }
+        my $sdur = $dur->in_units('seconds');
+        return sprintf "%2d seconds ago", $sdur;
+    }
+    elsif ( $ddur > 1 ) {
+        return "yesterday";
+    }
+    else { return "what??"; }
 }
 
 sub cmd_desc {
