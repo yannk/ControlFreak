@@ -532,6 +532,13 @@ sub command_desc {
     $ok->(join "\n", @out);
 }
 
+sub command_version {
+    my $ctrl = shift;
+    my %param = @_;
+    my $ok = _CODE($param{ok_cb}) || sub {};
+    $ok->($VERSION);
+}
+
 #sub command_warn {
 #    warn "I told you!";
 #}
