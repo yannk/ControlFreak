@@ -101,6 +101,19 @@ sub cmd_list {
     }
 }
 
+sub send_status_req {
+    my $commander = shift;
+    my $arg = shift;
+    my $statuses = shift;
+    $commander->send_request("command status $arg");
+    my ($error, $response) = $commander->read_response;
+    if ($error) {
+        warn "error: $error";
+        next;
+    }
+    $commander->parse_statuses($response, $statuses);
+}
+
 sub cmd_status {
     my $commander = shift;
     my @args      = parse_svcs(@_);
@@ -108,13 +121,7 @@ sub cmd_status {
     my %statuses;
     @args = ('all') unless @args;
     for (@args) {
-        $commander->send_request("command status $_");
-        my ($error, $response) = $commander->read_response;
-        if ($error) {
-            warn "error: $error";
-            next;
-        }
-        $commander->parse_statuses($response, \%statuses);
+        $commander->send_status_req($_, \%statuses);
     }
     for my $svcname (keys %statuses) {
         my %st = %{$statuses{$svcname}};
@@ -226,6 +233,17 @@ sub cmd_desc {
     for (@$response) {
         print "$_\n";
     }
+    return;
+}
+
+sub cmd_pid {
+    my $commander = shift;
+    my $svc = shift or return;
+    my %st;
+    $commander->send_status_req("service $svc", \%st);
+    my $pid = $st{$svc}{pid};
+    print "$pid\n" if $pid;
+    return;
 }
 
 sub cmd_up      { _cmd_svc( "up",      @_ ) }
@@ -357,6 +375,10 @@ one one server.
     cfkctl status
     cfkctl status @webs
     cfkctl status s1
+
+    ## pid of services
+    cfkctl pid s1
+    cfkctl pids
 
     ## remove a service reference completely
     cfkctl destroy syncer
