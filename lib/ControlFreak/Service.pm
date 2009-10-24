@@ -511,13 +511,18 @@ It consists in tab separated list of fields:
 
 =item * desc
 
+=item * proxy
+
+=item * cmd
+
 =back
 
 =cut
 
 sub desc_as_text {
     my $svc = shift;
-    return join "\t", map { $svc->$_ || "" } qw/name tags_as_text desc/;
+    return join "\t", map { $svc->$_ || "" }
+        qw/name tags_as_text desc proxy_as_text cmd/;
 }
 
 sub assign_proxy {
