@@ -572,6 +572,19 @@ sub command_status {
     $ok->(join "\n", @out);
 }
 
+sub command_proxy_status {
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $ok      = _CODE($param{ok_cb}) || sub {};
+    my @proxies = $ctrl->proxies;
+    my @out;
+    for (@proxies) {
+        push @out, $_->status_as_text;
+    }
+    $ok->(join "\n", @out);
+}
+
 ## reload initial configuration
 sub command_reload_config {
     my $ctrl  = shift;

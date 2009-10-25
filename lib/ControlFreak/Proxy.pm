@@ -95,6 +95,33 @@ sub new {
     return $proxy;
 }
 
+=head2 status_as_text
+
+Returns the status of the proxy, including its eventual pid in one line of
+text, where the following fields are seperated with tabs:
+
+=over 4
+
+=item * name
+
+=item * status ('up' or 'down')
+
+=item * pid, if proxy is up
+
+=back
+
+=cut
+
+sub status {
+    my $proxy = shift;
+    return $proxy->is_running ? "up" : "down";
+}
+
+sub status_as_text {
+    my $proxy = shift;
+    return join "\t", map { $proxy->$_ || "" } qw/name status pid/;
+}
+
 sub _err { ControlFreak::Util::error(@_) }
 
 =head2 services

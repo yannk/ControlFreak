@@ -164,6 +164,37 @@ sub cmd_status {
     }
 }
 
+sub cmd_proxy_status {
+    my $commander = shift;
+    $commander->send_request("command proxy_status");
+
+    my $do_color  = $can_color && $has_ansi;
+
+    my ($error, $response) = $commander->read_response;
+    if ($error) {
+        warn "error: $error";
+        next;
+    }
+    for (reverse @$response) {
+        my %st;
+        @st{ qw/name status pid/ } = split /\t/, $_;
+
+        my $string_status = my $status = $st{status};
+
+        if ($do_color) {
+            my $color;
+            if ($status eq "up") {
+                $color = "bold green";
+            }
+            else {
+                $color = "bold red";
+            }
+            $string_status = color($color) . $status . color('reset');
+        }
+        printf "%-6s %-20s %6s\n", $string_status, $st{name}, $st{pid};
+    }
+}
+
 sub parse_statuses {
     my $commander = shift;
     my ($response, $statuses) = @_;
