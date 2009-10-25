@@ -138,7 +138,7 @@ sub cmd_status {
         if ($st{start_time} && $st{stop_time}) {
             if ($st{start_time} >= $st{stop_time}) {
                 $uptime = $st{uptime};
-                $time   = $st{start_time};
+                $time   = $st{str_start_time};
             }
             else {
                 $uptime = $st{downtime};
@@ -147,11 +147,11 @@ sub cmd_status {
         }
         elsif ($st{start_time}) {
             $uptime = $st{uptime};
-            $time   = $st{start_time};
+            $time   = $st{str_start_time};
         }
         elsif ($st{stop_time}) {
             $uptime = $st{downtime};
-            $time   = $st{stop_time};
+            $time   = $st{str_stop_time};
         }
 
         $uptime ||= "";
@@ -193,9 +193,9 @@ sub parse_statuses {
         $statuses->{$name}{status}     = $string_status;
         $statuses->{$name}{uptime}     = _reltime( $st{start_time} );
         $statuses->{$name}{downtime}   = _reltime( $st{stop_time}  );
-        $statuses->{$name}{start_time} = scalar localtime( $st{start_time} )
+        $statuses->{$name}{str_start_time} = scalar localtime( $st{start_time} )
             if $st{start_time};
-        $statuses->{$name}{stop_time}  = scalar localtime( $st{stop_time} )
+        $statuses->{$name}{str_stop_time}  = scalar localtime( $st{stop_time} )
             if $st{stop_time};
     }
 }
