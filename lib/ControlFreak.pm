@@ -527,8 +527,16 @@ sub command_list {
 sub command_desc {
     my $ctrl = shift;
     my %param = @_;
+
     my $ok = _CODE($param{ok_cb}) || sub {};
-    my @out = map { $_->desc_as_text } $ctrl->services;
+
+    my $args = $param{args} || [ 'all' ];
+    $args = ['all'] unless @$args;
+
+    my @svcs = $ctrl->services_from_args(
+        %param, ok_cb => $ok,
+    );
+    my @out = map { $_->desc_as_text } @svcs;
     $ok->(join "\n", @out);
 }
 
