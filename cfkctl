@@ -351,25 +351,33 @@ cfkctl [options] command [svcref ...]
     --address=SOCK      Unix or tcp socket to connect to ControlFreak
                         [defaults to 127.0.0.1:11311]
 
- Commands:
-    up                  Make sure service is up
-    down                Make sure service is down
-    restart             If service is up, restart it
-    destroy             Down a service and deletes it
-    list                List all services
-    status              Print statuses of services
+ Commands: (take a list of service references in arguments)
+    up                  Make sure service(s) is(are) up
+    down                Make sure service(s) is(are) down
+    stop                Stop the service(s)s
+    restart             If service(s) is(are) up, restart
+    status              Print status(es) of service(s)
+    pids                Print service pid(s)
+    desc                Print a description of the service(s)
 
- Services references:
+    pid <service>       Print the pid of the specified service
+    list                List all services
+    destroy             Down a service and deletes it //not implemented yet
+    version             Print server's version
+
+ Service references:
     all                 All known services [default]
     svcname             A string of the name of the service
     @tag                All services tagged with the tag C<tag>
 
-  List of statuses:
-    up
-    down
-    failed   included in C<down>
-    backoff  included in C<down>
-    stopped  included in C<down>
+  List of possible status returned:
+    running
+    starting
+    stopping
+    stopped
+    fail
+    backoff
+    stopped
 
 
 =head1 OPTIONS
