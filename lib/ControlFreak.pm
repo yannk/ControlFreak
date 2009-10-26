@@ -572,6 +572,30 @@ sub command_status {
     $ok->(join "\n", @out);
 }
 
+sub command_pids {
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $ok      = _CODE($param{ok_cb}) || sub {};
+
+    my $args = $param{args} || [ 'all' ];
+    $args = ['all'] unless @$args;
+    my @svcs = $ctrl->services_from_args(%param, args => $args);
+    my %seen;
+    my @out;
+    for (@svcs) {
+        my $svcname = $_->name;
+        next if $seen{$svcname}++;
+        my @pids = ($_->pid);
+        if (my $proxy = $_->proxy) {
+            my $ppid = $proxy->pid;
+            unshift @pids, $ppid if $ppid;
+        }
+        push @out, "$svcname: " . join (", ", @pids);
+    }
+    $ok->(join "\n", @out);
+}
+
 sub command_proxy_status {
     my $ctrl = shift;
     my %param = @_;

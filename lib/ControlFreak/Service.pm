@@ -20,6 +20,7 @@ use constant BASE_BACKOFF_DELAY  => 0.3;
 use Object::Tiny qw{
     name
     desc
+    proxy
 
     state
     pid
