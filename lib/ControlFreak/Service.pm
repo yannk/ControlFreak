@@ -759,7 +759,8 @@ sub deal_with_failure {
     my $svc = shift;
 
     my $es = $svc->{exit_status};
-    $svc->{ctrl}->log->error("child terminated abnormally $es");
+    my $r  = ControlFreak::Util::exit_reason( $es );
+    $svc->{ctrl}->log->error("child terminated abnormally $es: $r");
 
     ## If we don't respawn on fail... just fail
     if (! $svc->respawn_on_fail) {
