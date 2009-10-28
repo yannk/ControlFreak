@@ -476,7 +476,6 @@ sub process_log {
 
     my $ctrl = $proxy->{ctrl};
     my ($type, $svcname, $msg) = split ':', $log_data, 3;
-        $ctrl->log->debug("log: $log_data");
 
     if ($svcname && $svcname eq '-') {
         ## this is a proxy log
@@ -486,7 +485,7 @@ sub process_log {
     my $svc = $ctrl->service($svcname);
     unless ($svc) {
         $svcname ||= "";
-        $ctrl->log->error("Cannot find svc '$svcname' for proxy log: $log_data");
+        $ctrl->log->error("Cannot find svc '$svcname' for proxy log");
         return;
     }
     $ctrl->log->proxy_svc_log([ $type, $svc, $msg ]);

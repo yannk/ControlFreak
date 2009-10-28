@@ -100,7 +100,8 @@ sub xfer_log {
         chomp $msg if $msg;
         my $pipe = $proxy->{log_hdl};
         my $name = $svc->{name} || "";
-        $pipe->push_write("$type:$name:$msg\n");
+        my @msgs = split /\n/, $msg;
+        $pipe->push_write("$type:$name:$_\n") for @msgs;
         return;
     };
     return $watcher_cb;
