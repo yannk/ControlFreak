@@ -22,7 +22,7 @@ GetOptions(
 pod2usage(1)             if $options{help};
 pod2usage(-verbose => 2) if $options{man};
 
-my $command = shift;
+my $command = shift || pod2usage(2);
 
 my $socket = get_sock_from_addr($options{address})
     or croak "Cannot get a socket for '$options{address}'";

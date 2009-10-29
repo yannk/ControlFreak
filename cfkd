@@ -11,7 +11,6 @@ use ControlFreak;
 use Carp;
 use Pod::Usage;
 use POSIX();
-use Try::Tiny;
 
 my $base = $Find::Lib::Base;
 
