@@ -393,7 +393,7 @@ sub _check_running_state {
     return unless $svc->is_starting;
     if (! $svc->pid) {
         if (my $proxy = $svc->{proxy}) {
-            $svc->{ctrl}->log->warning(
+            $svc->{ctrl}->log->warn(
                 "increase start_secs, proxy didn't have time to start service"
             );
             return;
