@@ -144,10 +144,9 @@ sub start_service {
     unless ($svc->{ignore_stderr} ) {
         $stds{"2>"} = $proxy->xfer_log(err => $svc);
     }
-
-    $svc->{cv} = AnyEvent::Util::run_cmd(
+    $svc->{cv} = $proxy->fork_do_cmd(
         $cmd,
-        close_all  => 1,
+        close_all => 1,
         '$$' => \$svc->{pid},
         %stds,
     );
@@ -161,6 +160,160 @@ sub start_service {
         $svc->{pid} = undef;
         delete $proxy->{services}{$name};
     });
+}
+
+sub fork_do_cmd {
+    my $proxy = shift;
+    my $cmd = shift;
+    require POSIX;
+    my $cv = AE::cv;
+
+    my %arg;
+    my %redir;
+    my @exe;
+
+    while (@_) {
+        my ($type, $ob) = splice @_, 0, 2;
+
+        my $fd = $type =~ s/^(\d+)// ? $1 : undef;
+
+        if ($type eq ">") {
+            $fd = 1 unless defined $fd;
+
+            if (defined eval { fileno $ob }) {
+                $redir{$fd} = $ob;
+            } elsif (ref $ob) {
+                my ($pr, $pw) = AnyEvent::Util::portable_pipe;
+                $cv->begin;
+                my $w; $w = AE::io $pr, 0,
+                "SCALAR" eq ref $ob
+                ? sub {
+                    sysread $pr, $$ob, 16384, length $$ob
+                        and return;
+                    undef $w; $cv->end;
+                }
+                : sub {
+                    my $buf;
+                    sysread $pr, $buf, 16384
+                        and return $ob->($buf);
+                    undef $w; $cv->end;
+                    $ob->();
+                }
+                ;
+                $redir{$fd} = $pw;
+            } else {
+                push @exe, sub {
+                    open my $fh, ">", $ob
+                        or POSIX::_exit (125);
+                    $redir{$fd} = $fh;
+                };
+            }
+
+        } elsif ($type eq "<") {
+            $fd = 0 unless defined $fd;
+
+            if (defined eval { fileno $ob }) {
+                $redir{$fd} = $ob;
+            } elsif (ref $ob) {
+                my ($pr, $pw) = AnyEvent::Util::portable_pipe;
+                $cv->begin;
+
+                my $data;
+                if ("SCALAR" eq ref $ob) {
+                    $data = $$ob;
+                    $ob = sub { };
+                } else {
+                    $data = $ob->();
+                }
+
+                my $w; $w = AE::io $pw, 1, sub {
+                    my $len = syswrite $pw, $data;
+
+                    if ($len <= 0) {
+                        undef $w; $cv->end;
+                    } else {
+                        substr $data, 0, $len, "";
+                        unless (length $data) {
+                            $data = $ob->();
+                            unless (length $data) {
+                                undef $w; $cv->end
+                            }
+                        }
+                    }
+                };
+
+                $redir{$fd} = $pr;
+            } else {
+                push @exe, sub {
+                    open my $fh, "<", $ob
+                        or POSIX::_exit (125);
+                    $redir{$fd} = $fh;
+                };
+            }
+
+        } else {
+            $arg{$type} = $ob;
+        }
+    }
+
+    my $pid = fork;
+    if (! defined $pid) {
+        $proxy->log('err', "couldn't fork! $!");
+        exit -1;
+    }
+    unless ($pid) {
+        # step 1, execute
+        $_->() for @exe;
+
+        # step 2, move any existing fd's out of the way
+        # this also ensures that dup2 is never called with fd1==fd2
+        # so the cloexec flag is always cleared
+        my (@oldfh, @close);
+        for my $fh (values %redir) {
+            push @oldfh, $fh; # make sure we keep it open
+            $fh = fileno $fh; # we only want the fd
+
+            # dup if we are in the way
+            # if we "leak" fds here, they will be dup2'ed over later
+            defined ($fh = POSIX::dup ($fh)) or POSIX::_exit (124)
+            while exists $redir{$fh};
+        }
+
+        # step 3, execute redirects
+        while (my ($k, $v) = each %redir) {
+            defined POSIX::dup2 ($v, $k)
+                or POSIX::_exit (123);
+        }
+
+        # step 4, close everything else, except 0, 1, 2
+        if ($arg{close_all}) {
+            AnyEvent::Util::close_all_fds_except 0, 1, 2, keys %redir
+        } else {
+            POSIX::close ($_)
+            for values %redir;
+        }
+
+        eval { $arg{on_prepare}(); 1 } or POSIX::_exit (123)
+        if exists $arg{on_prepare};
+
+        do $cmd;
+        print STDERR "My job is done";
+        exit 0;
+    }
+
+    ${$arg{'$$'}} = $pid
+        if $arg{'$$'};
+
+    %redir = (); # close child side of the fds
+
+    my $status;
+    $cv->begin (sub { shift->send ($status) });
+    my $cw; $cw = AE::child $pid, sub {
+        $status = $_[1];
+        undef $cw; $cv->end;
+    };
+
+    $cv;
 }
 
 sub stop_service {
