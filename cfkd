@@ -10,7 +10,7 @@ use AnyEvent();
 use ControlFreak;
 use Carp;
 use Pod::Usage;
-use POSIX();
+use POSIX 'SIGTERM';
 
 my $base = $Find::Lib::Base;
 
@@ -91,7 +91,7 @@ sub trap_sigs {
         return if $options{trap};
         $ctrl->shutdown;
         $SIG{TERM} = 'IGNORE';
-        kill 'TERM', -(getpgrp 0); ## kill our group
+        kill -SIGTERM, getpgrp 0; ## kill our group
         exit;
     };
     $SIG{__DIE__} = sub {
