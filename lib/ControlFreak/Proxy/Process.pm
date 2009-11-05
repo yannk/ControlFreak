@@ -296,7 +296,11 @@ sub fork_do_cmd {
         eval { $arg{on_prepare}(); 1 } or POSIX::_exit (123)
         if exists $arg{on_prepare};
 
-        do $cmd;
+        my $ret = do $cmd;
+        unless (defined $ret) {
+            print STDERR "Couldn't do '$cmd': $!";
+            exit -1;
+        }
         print STDERR "My job is done";
         exit 0;
     }
