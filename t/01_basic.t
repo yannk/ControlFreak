@@ -161,7 +161,7 @@ use_ok 'ControlFreak::Console';
     ok !$svc->fail_reason, "no fail reason, since we succeeded";
 }
 
-## Cannot creata a service with the name '-', it's special
+## Cannot create a service with the name '-', it's special
 {
     my $ctrl = ControlFreak->new();
     my $svc = $ctrl->find_or_create_svc('-');
