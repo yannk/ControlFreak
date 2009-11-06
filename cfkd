@@ -91,7 +91,7 @@ sub trap_sigs {
         return if $options{trap};
         $ctrl->shutdown;
         $SIG{TERM} = 'IGNORE';
-        kill -SIGTERM, getpgrp 0; ## kill our group
+        kill -(SIGTERM), getpgrp 0; ## kill our group
         exit;
     };
     $SIG{__DIE__} = sub {

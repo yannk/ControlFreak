@@ -8,6 +8,7 @@ use AnyEvent::Handle();
 use AnyEvent::Util();
 use JSON::XS;
 use Try::Tiny;
+use POSIX 'SIGTERM';
 
 =head1 NAME
 
@@ -148,6 +149,9 @@ sub start_service {
         $cmd,
         close_all => 1,
         '$$' => \$svc->{pid},
+        on_prepare => sub {
+            $proxy->prepare_child;
+        },
         %stds,
     );
     $proxy->send_status('started', $name, $svc->{pid});
@@ -160,6 +164,13 @@ sub start_service {
         $svc->{pid} = undef;
         delete $proxy->{services}{$name};
     });
+}
+
+sub prepare_child {
+    my $proxy = shift;
+    my $sessid = POSIX::setsid()
+        or $proxy->log(err => "cannot create a new session for proxied svc");
+    return;
 }
 
 sub fork_do_cmd {
@@ -343,7 +354,7 @@ sub _stop_service {
         $proxy->log('err', "no pid for '$svc->{name}'");
         return;
     }
-    kill 'TERM' => $pid;
+    kill -(SIGTERM), getpgrp($pid);
 }
 
 sub send_status {

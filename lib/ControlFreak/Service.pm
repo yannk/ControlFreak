@@ -294,7 +294,7 @@ sub stop {
         $proxy->stop_service(%param, service => $svc);
     }
     else {
-        kill 'TERM', $svc->pid;
+        kill -(SIGTERM), getpgrp($svc->pid);
     }
     $ok->();
     return 1;
@@ -718,7 +718,9 @@ sub _run_cmd {
     $svc->{child_cv} = AnyEvent::Util::run_cmd(
         $svc->cmd,
         close_all => 1,
-        on_prepare => sub {}, ## XXX setsid etc...?
+        on_prepare => sub {
+            $svc->prepare_child;
+        },
         '$$' => \$svc->{pid},
         %stds,
     );
@@ -727,6 +729,13 @@ sub _run_cmd {
         $svc->acknowledge_exit($es);
     });
     return 1;
+}
+
+sub prepare_child {
+    my $svc = shift;
+    my $sessid = POSIX::setsid()
+        or $svc->{ctrl}->log->error("cannot create new session for service");
+    return;
 }
 
 sub acknowledge_exit {

@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 75;
+use Test::More tests => 79;
 use Test::Exception;
 use ControlFreak;
 use AnyEvent;
@@ -168,4 +168,19 @@ use_ok 'ControlFreak::Console';
     is $svc, undef, "forbidden";
     $svc = ControlFreak::Service->new( name => '-' );
     is $svc, undef, "forbidden";
+}
+
+## test for the problem of sh -c being unstoppable
+{
+    my $ctrl = ControlFreak->new();
+    my $svc = $ctrl->find_or_create_svc('testsvc');
+    $svc->set_stopwait_secs(.10);
+    #$svc->set_cmd(['strace', '-o', '/tmp/ooo', 'sh', '-c', 'sleep 10; sleep 10']);
+    $svc->set_cmd('sleep 10; sleep 10');
+    $svc->start;
+    ok wait_for_starting($svc);
+    ok $svc->is_starting, "now starting";
+    $svc->stop;
+    ok wait_for_down($svc) or diag $svc->state;
+    ok $svc->is_down, "got stopped";
 }
