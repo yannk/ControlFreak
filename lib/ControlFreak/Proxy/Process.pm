@@ -150,7 +150,7 @@ sub start_service {
         close_all => 1,
         '$$' => \$svc->{pid},
         on_prepare => sub {
-            $proxy->prepare_child;
+            $proxy->prepare_child($svc => $cmd);
         },
         %stds,
     );
@@ -168,6 +168,10 @@ sub start_service {
 
 sub prepare_child {
     my $proxy = shift;
+    my $svc   = shift;
+    my $cmd   = shift;
+    my $name = $svc->{name};
+    $0 = "[cfk $name] $cmd";
     my $sessid = POSIX::setsid()
         or $proxy->log(err => "cannot create a new session for proxied svc");
     return;
