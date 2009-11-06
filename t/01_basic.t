@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 79;
+use Test::More tests => 85;
 use Test::Exception;
 use ControlFreak;
 use AnyEvent;
@@ -87,8 +87,8 @@ use_ok 'ControlFreak::Console';
     ok !$svc->is_up;
 
     ## now set a real command
-    $svc->set_cmd("sleep 10");
-    is $svc->cmd, "sleep 10";
+    $svc->set_cmd("sleep 10;");
+    is $svc->cmd, "sleep 10;";
     ok $svc->is_stopped;
     $svc->start( ok_cb => sub {  ok 1, "started" },
                  err_cb => sub { ok 0, "oh noes" } );
@@ -175,7 +175,6 @@ use_ok 'ControlFreak::Console';
     my $ctrl = ControlFreak->new();
     my $svc = $ctrl->find_or_create_svc('testsvc');
     $svc->set_stopwait_secs(.10);
-    #$svc->set_cmd(['strace', '-o', '/tmp/ooo', 'sh', '-c', 'sleep 10; sleep 10']);
     $svc->set_cmd('sleep 10; sleep 10');
     $svc->start;
     ok wait_for_starting($svc);
@@ -183,4 +182,28 @@ use_ok 'ControlFreak::Console';
     $svc->stop;
     ok wait_for_down($svc) or diag $svc->state;
     ok $svc->is_down, "got stopped";
+}
+
+## environment
+{
+    my $ctrl = ControlFreak->new();
+    my $svc = $ctrl->find_or_create_svc('s');
+    $svc->set_cmd(q(perl -e 'warn $$; die "bye" if $ENV{die}; sleep 100;'));
+#    $svc->set_cmd(['perl', '-e', 'die "bye" if $ENV{die}; sleep 100;']);
+    $svc->add_env( foo => "bar" );
+    $svc->set_start_secs(0.10);
+    $svc->set_stopwait_secs(0.10);
+    $svc->start;
+    ok wait_for_running($svc), "wait for running" or diag $svc->state;
+    ok $svc->is_running, "is running" or diag $svc->state;
+    $svc->stop;
+    ok wait_for_stopped($svc), "wait for stopped" or diag $svc->state;
+    $svc->add_env( die => "die" );
+    $svc->start;
+    ok wait_for_backoff($svc) or diag $svc->state;
+    ok $svc->is_backoff;
+    $svc->clear_env;
+    $svc->stop;
+    $svc->start;
+    ok wait_for_running($svc), "wait for running" or diag $svc->state;
 }

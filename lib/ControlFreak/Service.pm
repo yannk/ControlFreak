@@ -116,6 +116,7 @@ sub new {
         or croak "Service requires a controller";
 
     $svc->{tags} ||= {};
+    $svc->{env}  ||= {};
 
     return $svc;
 }
@@ -627,6 +628,38 @@ sub set_tags {
     shift->_set('tags', \%hash_value);
 }
 
+sub set_add_env {
+    my $svc = shift;
+    my $value = _STRING($_[0]) or return;
+    my ($key, $val) = split /=/, $value, 2;
+    $svc->{ctrl}->log->debug( "Setting ENV{$key} to '$val'" );
+    $svc->add_env($key, $val);
+}
+
+=head2 add_env($key => $value)
+
+Add an environment key, value pair to the service
+
+=cut
+
+sub add_env {
+    my $svc = shift;
+    my ($key, $value) = @_;
+    $svc->env->{$key} = $value;
+    return 1;
+}
+
+=head2 clear_env()
+
+Reset service environment to empty.
+
+=cut
+
+sub clear_env {
+    my $svc = shift;
+    $svc->{env} = {};
+}
+
 sub set_stopwait_secs {
     my $value = _NUMBER($_[1]) or return;
     shift->_set('stopwait_secs', $value);
@@ -735,7 +768,26 @@ sub prepare_child {
     my $svc = shift;
     my $sessid = POSIX::setsid()
         or $svc->{ctrl}->log->error("cannot create new session for service");
+    $svc->setup_environment;
     return;
+}
+
+=head2 setup_environment
+
+Executed in the child before exec, to take service's configured C<env> and
+populate C<%ENV> with it.
+
+=cut
+
+sub setup_environment {
+    my $svc = shift;
+    my $env = $svc->env;
+    return unless $env;
+    return unless ref $env eq 'HASH';
+    while (my ($k, $v) = each %$env) {
+        $ENV{$k} = $v;
+    }
+    return 1;
 }
 
 sub acknowledge_exit {
