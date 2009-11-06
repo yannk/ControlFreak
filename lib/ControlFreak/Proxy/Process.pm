@@ -170,6 +170,11 @@ sub prepare_child {
     my $proxy = shift;
     my $svc   = shift;
     my $cmd   = shift;
+
+    $SIG{HUP} = $SIG{INT} = $SIG{TERM}
+              = $SIG{__WARN__} = $SIG{__DIE__}
+              = 'DEFAULT';
+
     my $name = $svc->{name};
     $0 = "[cfk $name] $cmd";
     my $sessid = POSIX::setsid()

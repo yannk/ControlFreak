@@ -58,7 +58,6 @@ $proxy->log('out', "$0 proxy started");
 
 AnyEvent->condvar->recv;
 
-
 sub trap_sigs {
     $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
         my $sig = shift;
