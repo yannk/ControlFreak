@@ -3,12 +3,12 @@ package ControlFreak::Proxy::Process;
 use strict;
 use warnings;
 
-use AnyEvent();
-use AnyEvent::Handle();
-use AnyEvent::Util();
 use JSON::XS;
 use Try::Tiny;
 use POSIX 'SIGTERM';
+use IO::Select;
+
+$SIG{PIPE} = 'IGNORE';
 
 =head1 NAME
 
@@ -33,43 +33,48 @@ sub log {
     my $proxy = shift;
     my ($type, $msg) = @_;
     my $pipe = $proxy->{log_hdl} or return;
-    $pipe->push_write("$type:-:$msg\n");
+    $proxy->write_log("$type:-:$msg");
+}
+
+sub write_log {
+    my $proxy = shift;
+    my $fh = $proxy->{log_fh};
+    return unless $fh;
+    ## check buffer size XXX
+    push @{ $proxy->{log_buffer} }, shift;
+    $proxy->{write_select}->add($fh);
+    return;
 }
 
 sub init {
     my $proxy = shift;
 
-    set_nonblocking($proxy->{$_}) for (qw/command_fh status_fh log_fh/);
+    #set_nonblocking($proxy->{$_}) for (qw/command_fh status_fh log_fh/);
 
-    ## install the command watcher
+    ## where we buffer the writes until our wout fh are ready
+    $proxy->{log_buffer}    = [];
+    $proxy->{status_buffer} = [];
+
+    ## callbacks
+    $proxy->{readers}{ $proxy->{command_fh} } = sub { $proxy->command_cb(@_) };
+    $proxy->{writers}{ $proxy->{log_fh}     } = $proxy->{log_buffer}
+        if $proxy->{log_fh};
+    $proxy->{writers}{ $proxy->{status_fh}  } = $proxy->{status_buffer};
+
     my $fh = $proxy->{command_fh};
-    $proxy->{command_watcher} = AnyEvent->io(
-        fh => $fh,
-        poll => 'r',
-        cb => sub {
-            my @commands;
-            while (<$fh>) {
-                chomp;
-                push @commands, $_;
-            }
-            $proxy->process_command($_) for @commands;
-        },
-    );
+    $proxy->{read_select} = IO::Select->new;
+    $proxy->{write_select} = IO::Select->new;
+    $proxy->{read_select}->add($proxy->{command_fh});
+    $proxy->{write_select}->add($proxy->{log_fh})
+        if $proxy->{log_fh};
+    $proxy->{write_select}->add($proxy->{status_fh});
+}
 
-    $proxy->{status_hdl} = AnyEvent::Handle->new(
-        fh => $proxy->{status_fh},
-        #on_eof
-        #on_error
-    );
-
-    if ($proxy->{log_fh}) {
-        $proxy->{log_hdl} = AnyEvent::Handle->new(
-            fh => $proxy->{log_fh},
-        );
-    }
-    else {
-        $proxy->log('err', "No proxy logging");
-    }
+sub command_cb {
+    my $proxy = shift;
+    my $command = shift;
+    chomp $command;
+    $proxy->process_command($_) for (split /\n/, $$command);
 }
 
 sub process_command {
@@ -101,11 +106,10 @@ sub xfer_log {
     my $watcher_cb = sub {
         my $msg = shift;
         return unless defined $msg;
-        chomp $msg if $msg;
-        my $pipe = $proxy->{log_hdl};
+        chomp $$msg if $$msg;
         my $name = $svc->{name} || "";
-        my @msgs = split /\n/, $msg;
-        $pipe->push_write("$type:$name:$_\n") for @msgs;
+        my @msgs = split /\n/, $$msg;
+        $proxy->write_log("$type:$name:$_") for @msgs;
         return;
     };
     return $watcher_cb;
@@ -124,15 +128,11 @@ sub start_service {
 
     $proxy->log('out', "starting $name");
 
-    my %stds = (
-        "<"  => "/dev/null",
-        ">"  => "/dev/null",
-        "2>" => "/dev/null",
-    );
+    my %stds = ();
     if (my $sockname = $param->{tie_stdin_to}) {
         if ( my $fd = $proxy->{sockets}{$sockname} ) {
             if (open $svc->{fh}, "<&=$fd") {
-                $stds{"<"} = $svc->{fh};
+                $stds{in} = $svc->{fh};
             }
             else {
                 $proxy->log('err', "couldn't open fd $fd: $!");
@@ -143,14 +143,13 @@ sub start_service {
         }
     }
     unless ($svc->{ignore_stdout}) {
-        $stds{">"} = $proxy->xfer_log(out => $svc);
+        $stds{out} = $proxy->xfer_log(out => $svc);
     }
     unless ($svc->{ignore_stderr} ) {
-        $stds{"2>"} = $proxy->xfer_log(err => $svc);
+        $stds{err} = $proxy->xfer_log(err => $svc);
     }
-    $svc->{cv} = $proxy->fork_do_cmd(
+    $proxy->fork_do_cmd(
         $cmd,
-        close_all => 1,
         '$$' => \$svc->{pid},
         on_prepare => sub {
             $proxy->prepare_child($svc => $cmd);
@@ -158,15 +157,6 @@ sub start_service {
         %stds,
     );
     $proxy->send_status('started', $name, $svc->{pid});
-
-    $svc->{cv}->cb( sub {
-        my $es = shift()->recv;
-        $svc->{cv} = undef;
-        my $pid = $svc->{pid};
-        $proxy->send_status('stopped', $name, $pid, $es);
-        $svc->{pid} = undef;
-        delete $proxy->{services}{$name};
-    });
 }
 
 sub prepare_child {
@@ -181,102 +171,32 @@ sub prepare_child {
     my $name = $svc->{name};
     $0 = "[cfk $name] $cmd";
     my $sessid = POSIX::setsid()
-        or $proxy->log(err => "cannot create a new session for proxied svc");
+        or print STDERR "cannot create a new session for proxied svc\n";
     return;
 }
 
 sub fork_do_cmd {
     my $proxy = shift;
     my $cmd = shift;
-    require POSIX;
-    my $cv = AE::cv;
+    my %param = @_;
 
-    my %arg;
     my %redir;
-    my @exe;
-
-    while (@_) {
-        my ($type, $ob) = splice @_, 0, 2;
-
-        my $fd = $type =~ s/^(\d+)// ? $1 : undef;
-
-        if ($type eq ">") {
-            $fd = 1 unless defined $fd;
-
-            if (defined eval { fileno $ob }) {
-                $redir{$fd} = $ob;
-            } elsif (ref $ob) {
-                my ($pr, $pw) = AnyEvent::Util::portable_pipe;
-                $cv->begin;
-                my $w; $w = AE::io $pr, 0,
-                "SCALAR" eq ref $ob
-                ? sub {
-                    sysread $pr, $$ob, 16384, length $$ob
-                        and return;
-                    undef $w; $cv->end;
-                }
-                : sub {
-                    my $buf;
-                    sysread $pr, $buf, 16384
-                        and return $ob->($buf);
-                    undef $w; $cv->end;
-                    $ob->();
-                }
-                ;
-                $redir{$fd} = $pw;
-            } else {
-                push @exe, sub {
-                    open my $fh, ">", $ob
-                        or POSIX::_exit (125);
-                    $redir{$fd} = $fh;
-                };
-            }
-
-        } elsif ($type eq "<") {
-            $fd = 0 unless defined $fd;
-
-            if (defined eval { fileno $ob }) {
-                $redir{$fd} = $ob;
-            } elsif (ref $ob) {
-                my ($pr, $pw) = AnyEvent::Util::portable_pipe;
-                $cv->begin;
-
-                my $data;
-                if ("SCALAR" eq ref $ob) {
-                    $data = $$ob;
-                    $ob = sub { };
-                } else {
-                    $data = $ob->();
-                }
-
-                my $w; $w = AE::io $pw, 1, sub {
-                    my $len = syswrite $pw, $data;
-
-                    if ($len <= 0) {
-                        undef $w; $cv->end;
-                    } else {
-                        substr $data, 0, $len, "";
-                        unless (length $data) {
-                            $data = $ob->();
-                            unless (length $data) {
-                                undef $w; $cv->end
-                            }
-                        }
-                    }
-                };
-
-                $redir{$fd} = $pr;
-            } else {
-                push @exe, sub {
-                    open my $fh, "<", $ob
-                        or POSIX::_exit (125);
-                    $redir{$fd} = $fh;
-                };
-            }
-
-        } else {
-            $arg{$type} = $ob;
-        }
+    if (my $in = $param{in}) {
+        $redir{0} = $in;
+    }
+    if (my $out = $param{out}) {
+        my ($pr, $pw);
+        pipe ($pr, $pw);
+        $proxy->{readers}{$pr} = $out;
+        $proxy->{read_select}->add($pr);
+        $redir{1} = $pw;
+    }
+    if (my $err = $param{err}) {
+        my ($pr, $pw);
+        pipe ($pr, $pw);
+        $proxy->{readers}{$pr} = $err;
+        $proxy->{read_select}->add($pr);
+        $redir{2} = $pw;
     }
 
     my $pid = fork;
@@ -285,39 +205,30 @@ sub fork_do_cmd {
         exit -1;
     }
     unless ($pid) {
-        # step 1, execute
-        $_->() for @exe;
-
-        # step 2, move any existing fd's out of the way
-        # this also ensures that dup2 is never called with fd1==fd2
-        # so the cloexec flag is always cleared
-        my (@oldfh, @close);
-        for my $fh (values %redir) {
-            push @oldfh, $fh; # make sure we keep it open
-            $fh = fileno $fh; # we only want the fd
-
-            # dup if we are in the way
-            # if we "leak" fds here, they will be dup2'ed over later
-            defined ($fh = POSIX::dup ($fh)) or POSIX::_exit (124)
-            while exists $redir{$fh};
+        ## do the redirection of stds if requested
+        ## otherwise reopen to /dev/null
+        my $null;
+        for (0, 1, 2) {
+            if (exists $redir{$_}) {
+                defined POSIX::dup2($redir{$_}, $_)
+                    or POSIX::_exit(123);
+                POSIX::close($redir{$_});
+            }
+            else {
+                open $null, "+>/dev/null" unless $null
+                    or POSIX::_exit(124);
+                POSIX::close($_);
+                POSIX::dup2($null, $_);
+            }
         }
+        ## now close all remaining fds;
+        my $fd_max = eval { POSIX::sysconf (POSIX::_SC_OPEN_MAX ()) - 1 }
+                     || 1023;
+        POSIX::close($_) for (3 .. $fd_max);
 
-        # step 3, execute redirects
-        while (my ($k, $v) = each %redir) {
-            defined POSIX::dup2 ($v, $k)
-                or POSIX::_exit (123);
+        if (exists $param{on_prepare}) {
+            eval { $param{on_prepare}->(); 1 } or POSIX::_exit(123)
         }
-
-        # step 4, close everything else, except 0, 1, 2
-        if ($arg{close_all}) {
-            AnyEvent::Util::close_all_fds_except 0, 1, 2, keys %redir
-        } else {
-            POSIX::close ($_)
-            for values %redir;
-        }
-
-        eval { $arg{on_prepare}(); 1 } or POSIX::_exit (123)
-        if exists $arg{on_prepare};
 
         my $ret = do $cmd;
         unless (defined $ret) {
@@ -328,19 +239,11 @@ sub fork_do_cmd {
         exit 0;
     }
 
-    ${$arg{'$$'}} = $pid
-        if $arg{'$$'};
+    ${$param{'$$'}} = $pid
+        if $param{'$$'};
 
     %redir = (); # close child side of the fds
-
-    my $status;
-    $cv->begin (sub { shift->send ($status) });
-    my $cw; $cw = AE::child $pid, sub {
-        $status = $_[1];
-        undef $cw; $cv->end;
-    };
-
-    $cv;
+    return;
 }
 
 sub stop_service {
@@ -372,6 +275,9 @@ sub _stop_service {
 sub send_status {
     my $proxy = shift;
     my ($cmd, $name, $pid, $es) = @_;
+    my $fh = $proxy->{status_fh}
+        or return;
+
     my $string = encode_json({
         status => $cmd,
         name => $name,
@@ -379,7 +285,9 @@ sub send_status {
         exit_status => $es,
     });
 
-    $proxy->{status_hdl}->push_write("$string\n");
+    push @{ $proxy->{status_buffer} }, $string;
+    ## now watch for writability.
+    $proxy->{write_select}->add($fh);
 }
 
 sub sockets_from_env {
@@ -400,8 +308,76 @@ sub shutdown {
     }
 }
 
+sub child_exit {
+    my $proxy = shift;
+    my ($pid, $status) = @_;
+    my ($svc) = grep { $_->{pid} == $pid } values %{ $proxy->{services} };
+    unless ($svc) {
+        $proxy->log(err => "Unknown child of pid $pid");
+        return;
+    }
+    $proxy->send_status('stopped', $svc->{name}, $pid, $status);
+    $svc->{pid} = undef;
+    delete $proxy->{services}{ $svc->{name} };
+}
+
 sub run {
-    AE::cv->recv;
+    my $proxy = shift;
+
+    $SIG{CHLD} = sub {
+        while ((my $pid = waitpid -1, &POSIX::WNOHANG) > 0) {
+            $proxy->child_exit($pid, $?);
+        }
+    };
+
+    my $rs = $proxy->{read_select};
+    my $ws = $proxy->{write_select};
+    while (my ($rout, $wout) = IO::Select->select($rs, $ws, undef)) {
+        for my $fh (@$rout) {
+            my $len = sysread($fh, my $buf, 16*1024);
+            if ($len <= 0) {
+                $rs->remove($fh);
+                close $fh;
+            }
+            $proxy->dispatch_read($fh, \$buf);
+        }
+        for my $fh (@$wout) {
+            $proxy->dispatch_write($fh);
+        }
+    }
+}
+
+sub dispatch_read {
+    my $proxy = shift;
+    my ($fh, $dataref) = @_;
+    my $cb = $proxy->{readers}->{$fh};
+    unless ($cb) {
+        $proxy->log(err => "cannot find callback for reader");
+        return;
+    }
+    $cb->($dataref);
+}
+
+sub dispatch_write {
+    my $proxy = shift;
+    my ($fh) = @_;
+    if (! exists $proxy->{writers}{$fh} ) {
+        $proxy->log(err => "cannot find the buffer for writer");
+        return;
+    }
+    my $buf = $proxy->{writers}{$fh} || [];
+    my $ws = $proxy->{write_select};
+    while (@$buf) {
+        my $data = shift @$buf;
+        my $len = syswrite $fh, "$data\n";
+        if (! defined $len or $len <= 0) {
+            $ws->remove($fh);
+            close $fh;
+            last;
+        }
+    }
+    ## We don't need to look for writability for now
+    $ws->remove($fh);
 }
 
 sub set_nonblocking {
