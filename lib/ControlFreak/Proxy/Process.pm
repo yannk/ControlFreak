@@ -38,6 +38,9 @@ sub log {
 
 sub init {
     my $proxy = shift;
+
+    set_nonblocking($proxy->{$_}) for (qw/command_fh status_fh log_fh/);
+
     ## install the command watcher
     my $fh = $proxy->{command_fh};
     $proxy->{command_watcher} = AnyEvent->io(
@@ -395,6 +398,15 @@ sub shutdown {
     for my $svc (values %{ $proxy->{services} }) {
         $proxy->_stop_service($svc);
     }
+}
+
+sub run {
+    AE::cv->recv;
+}
+
+sub set_nonblocking {
+    require Fcntl;
+    fcntl $_[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK;
 }
 
 1;

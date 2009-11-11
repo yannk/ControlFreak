@@ -41,8 +41,6 @@ open my $sfh, ">>&=$sfd"
 open my $lfh, ">>&=$lfd"
     or die "Cannot open Status filehandle, is descriptor correct?";
 
-AnyEvent::Util::fh_nonblocking($_, 1) for ($cfh, $sfh, $lfh);
-
 trap_sigs();
 
 my $sockets = ControlFreak::Proxy::Process->sockets_from_env;
@@ -55,8 +53,7 @@ $proxy = ControlFreak::Proxy::Process->new(
 );
 
 $proxy->log('out', "$0 proxy started");
-
-AnyEvent->condvar->recv;
+$proxy->run;
 
 sub trap_sigs {
     $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
