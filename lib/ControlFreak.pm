@@ -58,7 +58,7 @@ ControlFreak - a process supervisor
 =head1 DESCRIPTION
 
 ControlFreak is a process supervisor. It consists in a set of pure
-Perl classes, a controlling process usally running in the background and
+Perl classes, a controlling process usually running in the background and
 a command line tool to talk to it.
 
 Instances of this main L<ControlFreak> class are called controller, C<ctrl>.
