@@ -799,6 +799,7 @@ sub setup_environment {
     while (my ($k, $v) = each %$env) {
         $ENV{$k} = $v;
     }
+    $ENV{CONTROL_FREAK_ENABLED} = 1;
     return 1;
 }
 

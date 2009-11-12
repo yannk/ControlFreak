@@ -124,6 +124,7 @@ sub start_service {
 
     my $svc  = {};
     $svc->{name} = $name; # intentional repeat
+    $svc->{env} = $param->{env} || {};
     $proxy->{services}{$name} = $svc;
 
     $proxy->log('out', "starting $name");
@@ -172,7 +173,23 @@ sub prepare_child {
     $0 = "[cfk $name] $cmd";
     my $sessid = POSIX::setsid()
         or print STDERR "cannot create a new session for proxied svc\n";
+
+    $proxy->setup_environment($svc);
+
     return;
+}
+
+sub setup_environment {
+    my $proxy = shift;
+    my $svc = shift;
+    my $env = $svc->{env};
+    return unless $env;
+    return unless ref $env eq 'HASH';
+    while (my ($k, $v) = each %$env) {
+        $ENV{$k} = $v;
+    }
+    $ENV{CONTROL_FREAK_ENABLED} = 1;
+    return 1;
 }
 
 sub fork_do_cmd {
