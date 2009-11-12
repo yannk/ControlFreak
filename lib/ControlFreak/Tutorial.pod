@@ -66,8 +66,8 @@ that allows operators and programs to hand instructions to the daemon.
 
 The daemon duty is to fork and exec services, making sure that they are
 running or stopped according to commands received. C<cfkd> is also
-configured with logging capabilities, so that STDOUT and STDERR of the
-services it has the responsibities of aren't lost.
+configured with logging capabilities, in such way that STDOUT and STDERR
+of the services it has the responsibities of, aren't lost.
 
 =head1 SIMPLE EXAMPLE
 
@@ -146,9 +146,10 @@ If you wait a little (the time for sleep 10 to complete) you'll see:
   OK
 
 Both services have now completed their task. Of course there are options
-to make a service restart automatically once it finished. But note that
-if a service exists abnormally it is restarted unless you specify otherwise
-(more on that later).
+to make a service restart automatically once it finishes. But note that
+if a service exists abnormally it is restarted unless you specify otherwise.
+(See rest of documentation for all the options of services lifecycle
+management).
 
 =head2 When a service dies or exit abnormally
 
@@ -179,7 +180,7 @@ The pattern layout configuration is better understood if you refer to this
 page: L<http://search.cpan.org/~mschilli/Log-Log4perl-1.25/lib/Log/Log4perl/Layout/PatternLayout.pm>
 
 Note that C<%S> is a custom placeholder representing the pid of the service if
-it it exists.
+it exists.
 
   # declare this file in our previous configuration
   $ echo "logger config = /tmp/cfk/log.conf" >> config
@@ -210,7 +211,7 @@ understand why something is not working the way it should.
 =head1 SHARING SOCKETS (use ControlFreak as a prefork server)
 
 Another strength of ControlFreak is the ability it has to open a local socket
-and by mean of fork-and-exec share that sockets among multiple services
+and by mean of fork-and-exec, share that socket with multiple services
 (of the same type most likely).
 
 The classical situation is a bunch of web workers all accepting connections
@@ -219,7 +220,7 @@ these workers who don't have to worry about managing this socket at all.
 
 In an environment where you have a lot of web nodes behind a light proxy
 (like L<Perlbal> or many others) it can greatly simplify the maintenance
-of your webcluster. You just have to declare in Perlbal's nodefile one
+of your web cluster. You just have to declare in Perlbal's nodefile one
 node per server. (10.0.0.100:8080, 10.0.0.101:8080, ...) which hides
 a number or actual workers. Of course you manage the number of active workers
 using ControlFreak.
