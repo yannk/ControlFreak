@@ -1,33 +1,5 @@
-This is WORK IN PROGRESS - The base works but is poorly documented,
-and it's not usable other than for testing, please if you are not
-a hacker, wait a few days. :)
+This is WORK IN PROGRESS.
 
-I'm still hacking on it.
-The documentation for the basic feature set is pretty
-much there though.
+see lib/ControlFreak/Tutorial.pod
 
-INSTALLATION
-
-ControlFreak installation is straightforward. If your CPAN shell is set up,
-you should just be able to do
-
-    % cpan ControlFreak
-
-Download it, unpack it, then build it as per the usual:
-
-    % perl Makefile.PL
-    % make && make test
-
-Then install it:
-
-    % make install
-
-DOCUMENTATION
-
-ControlFreak documentation is available as in POD. So you can do:
-
-    % perldoc ControlFreak
-
-to read the documentation online with your favorite pager.
-
-Yann Kerherve
+for an introduction

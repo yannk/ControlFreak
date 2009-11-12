@@ -224,6 +224,8 @@ node per server. (10.0.0.100:8080, 10.0.0.101:8080, ...) which hides
 a number or actual workers. Of course you manage the number of active workers
 using ControlFreak.
 
+(Here goes the example)
+
 =head1 SHARING MEMORY - Benefit from Unix Copy-On-Write Effect
 
 (Experimental feature - The goal is to fork workers from a same
@@ -234,13 +236,47 @@ we want to keep C<cfkd> very stable anyway, we use an intermediate process:
 a Proxy, whose job is to transparently manage a bunch of children services
 as if they were directly under C<cfkd> control.
 
+(Here goes the example)
+
 =head1 SECURITY
 
 (Where I describe that having the management port open to the world is a bad
 thing - or even a suicidal behaviour if you combine it with
 "C<console full=on>"
 
+=head1 TAGGING SERVICES
+
+The config file and commands issued to the management port are intentionally
+kept very simple. There is no loop mechanism allowing you to declare: "I want
+10 of these web workers". The rationale is that if you really need that you
+can build it yourself on top of C<ControlFreak>. To help in the process, and
+to help managing all these similar services, a tag system is provided.
+
+The idea is very simple, you can attach a number of tags to services, and
+can refer to services using those tags.
+
+Here is a very simple example:
+
+  logger config = /tmp/cfk/log.conf
+  console address=127.0.0.1:11311
+  console full=on
+  service web1 cmd=sleep 100
+  service web1 tags=web,prod
+
+  service web2 cmd=sleep 100
+  service web2 tags=web
+
+  service web3 cmd=sleep 100
+  service web3 tags=web,stage
+
+  # the leading '@' refers to services by tag
+  $ perl ./cfkctl start @web
+  $ perl ./cfkctl status @prod
+  running web1                   6 seconds ago (Wed Nov 11 17:30:17 2009)
+
 =head1 MEMORY OVERHEAD
+
+(not really its place?)
 
 The memory overhead is minimal considering it uses perl. On my 64bits linux,
 here is the weight of C<cfkd>.
