@@ -273,8 +273,19 @@ sub stop {
     my $err = $param{err_cb} ||= sub {};
     my $ok  = $param{ok_cb}  ||= sub {};
 
-
     my $svcname = $svc->name || "unnamed service";
+
+    if ($svc->is_backoff) {
+        ## stop retrying.
+        $svc->{backoff_cv}    = undef;
+        $svc->{start_cv}      = undef;
+        $svc->{backoff_retry} = undef;
+        $svc->{state}         = 'stopped';
+        $svc->{wants_down}    = 1;
+        $svc->{stop_time}     = time;
+        return;
+    }
+
     return $svc->_err(%param, "Service '$svcname' is already down")
         if $svc->is_down;
 
@@ -344,11 +355,12 @@ sub start {
     return $svc->_err(%param, "Service '$svcname' has no known command")
         unless $cmd;
 
-    $svc->{start_time}  = time;
-    $svc->{stop_time}   = undef;
-    $svc->{wants_down}  = undef;
-    $svc->{normal_exit} = undef;
-    $svc->{state} = 'starting';
+    $svc->{start_time}    = time;
+    $svc->{stop_time}     = undef;
+    $svc->{wants_down}    = undef;
+    $svc->{normal_exit}   = undef;
+    $svc->{backoff_retry} = undef unless $svc->is_backoff;
+    $svc->{state}         = 'starting';
 
     my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
     $svc->{start_cv} =

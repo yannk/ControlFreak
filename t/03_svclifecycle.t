@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 30;
+use Test::More tests => 33;
 require 'testutils.pl';
 use ControlFreak;
 use AnyEvent;
@@ -49,6 +49,16 @@ my $ctrl = ControlFreak->new();
     is $b->{backoff_retry}, $max, "reached the max retry";
     ok $b->is_fatal;
     is $b->state, "fatal";
+
+    ## do that again
+    $b->start;
+    diag $b->state;
+    diag $b->{backoff_retry};
+    wait_for_backoff($b);
+    ok $b->is_backoff, 'backoff state' or diag $b->state;
+    ok $b->{backoff_retry} < $max, "backoff counter reinitialized";
+    $b->stop;
+    ok $b->is_stopped, "interrupted the automatic retry";
 }
 
 ## if a service is running and fail, respawn by restarting it.
