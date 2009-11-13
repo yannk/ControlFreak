@@ -464,9 +464,7 @@ sub _check_running_state {
             );
             return;
         }
-        else {
-            $svc->{ctrl}->log->error("smth went terribly wrong");
-        }
+        $svc->{ctrl}->log->error("smth went terribly wrong");
         $svc->{state} = 'fail';
         return;
     }

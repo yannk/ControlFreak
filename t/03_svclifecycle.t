@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 42;
+use Test::More tests => 44;
 require 'testutils.pl';
 use ControlFreak;
 use AnyEvent;
@@ -45,6 +45,8 @@ my $ctrl = ControlFreak->new();
     ok $b->is_backoff, 'backoff state';
     ok $b->is_down, 'backoff is a down state';
     is $b->{backoff_retry}, 1, "retried once";
+    ok wait_for_starting($b), "starting again" or diag $b->state;
+    ok wait_for_backoff($b), "backoff again" or diag $b->state;
     wait_for(sub { $b->{backoff_retry} >= $max }, 7);
     is $b->{backoff_retry}, $max, "reached the max retry";
     ok $b->is_fatal;

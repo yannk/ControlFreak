@@ -1,6 +1,6 @@
 use strict;
-use Find::Lib libs => [ '.', '../lib' ];
-use Test::More tests => 24;
+use Find::Lib libs => '.', '../lib';
+use Test::More tests => 30;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -85,6 +85,21 @@ sub process_ok {
     $proxy->shutdown;
     wait_for (sub { $svc->is_down });
     ok $svc->is_fail or diag $svc->state;
+
+    ## backoff bug
+    my $s = Find::Lib->catfile('..', 'cfk-share-mem-proxy.pl');
+    my $p = Find::Lib->catfile('preload.pl');
+    $proxy->set_cmd("$s --preload $p");
+    $proxy->run;
+    ok $svc->{proxy}, "proxy is still there";
+    is $svc->{proxy}, $proxy, "same proxy";
+    ok $proxy->is_running, "proxy restarted";
+    $svc->set_cmd(q{perl -e 'die "die"'});
+    $svc->start;
+    ok wait_for_starting($svc), "starting" or diag $svc->state;
+    ok wait_for_backoff($svc), "backoff" or diag $svc->state;
+    $svc->set_respawn_max_retries(3);
+    ok wait_for_fatal($svc, 4), "fatal" or diag $svc->state;
 }
 
 ## valid commands
