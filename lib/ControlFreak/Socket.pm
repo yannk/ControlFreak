@@ -232,7 +232,9 @@ sub set_nonblocking {
 
 sub set_listen_qsize {
     my $sock = shift;
-    my $value = _NUMBER($_[0]) || 0;
+    my $size = shift;
+    $size = SOMAXCONN if $size && $size =~ /^\s*max\s*$/i;
+    my $value = _NUMBER($size) || 0;
     $sock->{listen_qsize} = $value;
 }
 
