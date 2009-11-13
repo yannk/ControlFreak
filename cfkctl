@@ -142,7 +142,7 @@ sub cmd_status {
             }
             else {
                 $uptime = $st{downtime};
-                $time   = $st{stop_time};
+                $time   = $st{str_stop_time};
             }
         }
         elsif ($st{start_time}) {
