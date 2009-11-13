@@ -118,7 +118,7 @@ use_ok 'ControlFreak::Console';
     ok !$svc->start_time;
     ok !$svc->pid;
 
-    $svc->set_cmd([ 'perl', '-e', 'die "oh noes"' ]);
+    $svc->set_cmd([ $^X, '-e', 'die "oh noes"' ]);
     $svc->set_respawn_on_fail(0);
     $svc->start;
     ok $svc->pid, "got a pid";
@@ -129,7 +129,7 @@ use_ok 'ControlFreak::Console';
     like $svc->fail_reason, qr/255/, "exit code";
     unlike $svc->fail_reason, qr/signal/, "no signal";
 
-    $svc->set_cmd(['perl', '-e', 'kill 9, $$']);
+    $svc->set_cmd([$^X, '-e', 'kill 9, $$']);
     $svc->set_respawn_on_fail(0);
     $svc->start;
     ok wait_for_fail($svc, 2);
@@ -137,7 +137,7 @@ use_ok 'ControlFreak::Console';
     like $svc->fail_reason, qr/signal 9/, "killed";
 
     ## let's kill the process abruptly
-    $svc->set_cmd(['perl', '-e', 'sleep 100']);
+    $svc->set_cmd([$^X, '-e', 'sleep 100']);
     $svc->set_respawn_on_fail(0);
     $svc->start;
     ok wait_for_starting($svc);
@@ -188,7 +188,7 @@ use_ok 'ControlFreak::Console';
 {
     my $ctrl = ControlFreak->new();
     my $svc = $ctrl->find_or_create_svc('s');
-    $svc->set_cmd(q(perl -e 'warn $$; die "bye" if $ENV{die}; sleep 100;'));
+    $svc->set_cmd(qq($^X -e 'warn \$\$; die "bye" if \$ENV{die}; sleep 100;'));
 #    $svc->set_cmd(['perl', '-e', 'die "bye" if $ENV{die}; sleep 100;']);
     $svc->add_env( foo => "bar" );
     $svc->set_startwait_secs(0.10);
@@ -209,7 +209,7 @@ use_ok 'ControlFreak::Console';
     ok wait_for_running($svc), "waited for running" or diag $svc->state;
     $svc->stop;
     ok wait_for_stopped($svc), "wait for stopped" or diag $svc->state;
-    $svc->set_cmd(q(perl -e 'die "bye" if $ENV{CONTROL_FREAK_ENABLED}; sleep 100;'));
+    $svc->set_cmd(qq($^X -e 'die "bye" if \$ENV{CONTROL_FREAK_ENABLED}; sleep 100;'));
     $svc->start;
     ok wait_for_backoff($svc), "waited for backoff" or diag $svc->state;
     ok $svc->is_backoff, "backoff, CONTROL_FREAK_ENABLED==1";

@@ -89,12 +89,12 @@ sub process_ok {
     ## backoff bug
     my $s = Find::Lib->catfile('..', 'cfk-share-mem-proxy.pl');
     my $p = Find::Lib->catfile('preload.pl');
-    $proxy->set_cmd("$s --preload $p");
+    $proxy->set_cmd("$^X $s --preload $p");
     $proxy->run;
     ok $svc->{proxy}, "proxy is still there";
     is $svc->{proxy}, $proxy, "same proxy";
     ok $proxy->is_running, "proxy restarted";
-    $svc->set_cmd(q{perl -e 'die "die"'});
+    $svc->set_cmd(qq{$^X -e 'die "die"'});
     $svc->start;
     ok wait_for_starting($svc), "starting" or diag $svc->state;
     ok wait_for_backoff($svc), "backoff" or diag $svc->state;

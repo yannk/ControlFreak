@@ -122,7 +122,7 @@ my $ctrl = ControlFreak->new();
 {
     my $f = $ctrl->find_or_create_svc('f');
     $f->set_respawn_on_stop(1);
-    $f->set_cmd(['perl', '-e', 'sleep 20; exit 0', ]);
+    $f->set_cmd([$^X, '-e', 'sleep 20; exit 0', ]);
     $f->set_startwait_secs(0.10);
     ok $f->is_stopped, "initially stopped";
     $f->start;
@@ -154,7 +154,7 @@ my $ctrl = ControlFreak->new();
 {
     my $h = $ctrl->find_or_create_svc('h');
     $h->set_respawn_on_stop(1);
-    $h->set_cmd(q|perl -e '$SIG{TERM}="IGNORE"; sleep 100'|);
+    $h->set_cmd(qq|$^X -e '\$SIG{TERM}="IGNORE"; sleep 100'|);
     $h->set_startwait_secs(0.10);
     $h->set_stopwait_secs(0.3);
     $h->start;
