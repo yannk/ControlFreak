@@ -52,8 +52,6 @@ my $ctrl = ControlFreak->new();
 
     ## do that again
     $b->start;
-    diag $b->state;
-    diag $b->{backoff_retry};
     wait_for_backoff($b);
     ok $b->is_backoff, 'backoff state' or diag $b->state;
     ok $b->{backoff_retry} < $max, "backoff counter reinitialized";
