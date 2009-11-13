@@ -907,6 +907,7 @@ sub acknowledge_exit {
 
     ## reset timers, set basic new state
     $svc->{stop_cv}     = undef;
+    $svc->{start_cv}    = undef;
     $svc->{child_cv}    = undef;
     $svc->{pid}         = undef;
     $svc->{exit_status} = $es;
@@ -952,10 +953,9 @@ sub deal_with_failure {
             ## Exhausted options: bail
             $svc->{state}      = 'fatal';
             $svc->{backoff_cv} = undef;
-            $svc->{start_cv}   = undef;
             return;
         }
-        $svc->{state}= "backoff";
+        $svc->{state}         = "backoff";
         my $backoff_delay     = $svc->_exponential_backoff_delay($n);
         $svc->{backoff_retry} = $n;
         $svc->{backoff_cv}    = AE::timer $backoff_delay, 0,
