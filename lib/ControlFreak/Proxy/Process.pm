@@ -228,8 +228,10 @@ sub fork_do_cmd {
         my $null;
         for (0, 1, 2) {
             if (exists $redir{$_}) {
-                defined POSIX::dup2($redir{$_}, $_)
-                    or POSIX::_exit(123);
+                POSIX::close($_);
+                unless (defined POSIX::dup2(fileno $redir{$_}, $_)) {
+                    POSIX::_exit(123);
+                }
                 POSIX::close($redir{$_});
             }
             else {
