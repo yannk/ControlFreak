@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 33;
+use Test::More tests => 37;
 require 'testutils.pl';
 use ControlFreak;
 use AnyEvent;
@@ -97,7 +97,7 @@ my $ctrl = ControlFreak->new();
     is $d->{backoff_retry}, undef, "we didn't even retry";
 }
 
-## respawn_on_stop, optionnally restart a service that goes down
+## respawn_on_stop, optionally restart a service that goes down
 ## naturally (i.e. when ControlFreak didn't initiate a stop)
 {
     my $e = $ctrl->find_or_create_svc('e');
@@ -146,4 +146,20 @@ my $ctrl = ControlFreak->new();
     wait_for_stopped($g, 2);
     ok $g->is_stopped, "really stopped"
         or diag $g->state;
+}
+
+## forcibly kill a service after stopwait_secs
+{
+    my $h = $ctrl->find_or_create_svc('h');
+    $h->set_respawn_on_stop(1);
+    $h->set_cmd(q|perl -e '$SIG{TERM}="IGNORE"; sleep 100'|);
+    $h->set_start_secs(0.10);
+    $h->set_stopwait_secs(0.3);
+    $h->start;
+    wait_for_running($h);
+    ok $h->is_running, "now running" or diag $h->state;
+    $h->stop;
+    ok wait_for_stopping($h), "stopping";
+    ok ! wait_for_stopped($h, .15), "still stopping! will need to kill it";
+    ok wait_for_fail($h), "finally killed with SIGKILL" or diag $h->state;
 }

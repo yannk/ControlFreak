@@ -10,12 +10,13 @@ use ControlFreak::Util();
 use Data::Dumper();
 use JSON::XS;
 use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY _POSINT };
-use POSIX 'SIGTERM';
+use POSIX qw{ SIGTERM SIGKILL };
 use Try::Tiny;
 
-use constant DEFAULT_START_SECS  => 1;
-use constant DEFAULT_MAX_RETRIES => 8;
-use constant BASE_BACKOFF_DELAY  => 0.3;
+use constant DEFAULT_START_SECS     => 1;
+use constant DEFAULT_STOPWAIT_SECS  => 2;
+use constant DEFAULT_MAX_RETRIES    => 8;
+use constant BASE_BACKOFF_DELAY     => 0.3;
 
 use Object::Tiny qw{
     name
@@ -302,6 +303,10 @@ sub stop {
     $svc->{state}      = 'stopping';
     $svc->{wants_down} = 1;
 
+    my $stopwait_secs = $svc->stopwait_secs || DEFAULT_STOPWAIT_SECS;
+    $svc->{stop_cv} =
+        AE::timer $stopwait_secs, 0, sub { $svc->_check_stopping_state };
+
     if (my $proxy = $svc->{proxy}) {
         $proxy->stop_service(%param, service => $svc);
     }
@@ -398,6 +403,47 @@ sub has_stopped {
     $svc->{child_cv} = undef;
     $svc->{ctrl}->log->info($reason);
     return 1;
+}
+
+sub _check_stopping_state {
+    my $svc = shift;
+    $svc->{stop_cv} = undef;
+    return if $svc->is_stopped;
+
+    my $wait = $svc->stopwait_secs;
+    my $name = $svc->name;
+    if ($svc->pid) {
+        $svc->{ctrl}->log->warn(
+            "service $name still running after $wait, killing."
+        );
+        $svc->kill;
+    }
+    else {
+        $svc->{ctrl}->log->error( "service $name not stopped but, not pid?");
+        $svc->{state} = 'fail';
+    }
+    return;
+}
+
+=head2 kill
+
+Kills the service. This is the brutal way of getting rid of service's process
+it will result in the program being uncleanly exited which will be reported
+later in the status of the service. This command is used when a service
+hasn't terminated after C<stopwait_secs>.
+
+=back
+
+=cut
+
+sub kill {
+    my $svc = shift;
+    my $pid = $svc->pid;
+    unless ($pid) {
+        my $name = $svc->name;
+        $svc->{ctrl}->log->error( "cannot kill $name without pid" );
+    }
+    kill -(SIGKILL), getpgrp($pid);
 }
 
 sub _check_running_state {
@@ -833,24 +879,23 @@ sub acknowledge_exit {
     my $ctrl = $svc->{ctrl};
     my $name = $svc->name;
 
+    ## reset timers, set basic new state
+    $svc->{stop_cv}     = undef;
     $svc->{child_cv}    = undef;
     $svc->{pid}         = undef;
     $svc->{exit_status} = $es;
 
-    my $state;
     if (POSIX::WIFEXITED($es) && !POSIX::WEXITSTATUS($es)) {
         $ctrl->log->info("child $name exited");
-        $state = "stopped";
         $svc->{normal_exit} = 1;
     }
     elsif (POSIX::WIFSIGNALED($es) && POSIX::WTERMSIG($es) == SIGTERM) {
         $ctrl->log->info("child $name gracefully killed");
-        $state = "stopped";
     }
     else {
         return $svc->deal_with_failure;
     }
-    $svc->{state} = $state;
+    $svc->{state} = 'stopped';
     $svc->optionally_respawn;
 }
 
@@ -864,6 +909,12 @@ sub deal_with_failure {
 
     ## If we don't respawn on fail... just fail
     if (! $svc->respawn_on_fail) {
+        $svc->{state} = 'fail';
+        return;
+    }
+
+    ## If we wanted the service down. Keep it that way.
+    if ($svc->{wants_down}) {
         $svc->{state} = 'fail';
         return;
     }
