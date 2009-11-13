@@ -119,7 +119,7 @@ sub accept_connection {
             cmd => $line,
             ctrl => $console->{ctrl},
             err_cb => sub {
-                my $error = shift;
+                my $error = shift || "";
                 $h->push_write("ERROR: $error$CRLF");
             },
             ok_cb => sub {
