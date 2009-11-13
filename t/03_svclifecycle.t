@@ -63,7 +63,7 @@ my $ctrl = ControlFreak->new();
 {
     my $wait = AE::cv;
     my $c = $ctrl->find_or_create_svc('c');
-    $c->set_start_secs(0.001); ## very sort time
+    $c->set_startwait_secs(0.001); ## very sort time
     $c->set_cmd('sh -c "sleep .25; exit 255"'); # .25 >> .001
     $c->start;
     my $pid = $c->pid;
@@ -103,7 +103,7 @@ my $ctrl = ControlFreak->new();
     my $e = $ctrl->find_or_create_svc('e');
     $e->set_respawn_on_stop(1);
     $e->set_cmd('sh -c "sleep .20; exit 0"'); ## normal exit
-    $e->set_start_secs(0.10);
+    $e->set_startwait_secs(0.10);
     $e->start;
     wait_for_starting($e);
     ok $e->is_starting, "now starting";
@@ -121,7 +121,7 @@ my $ctrl = ControlFreak->new();
     my $f = $ctrl->find_or_create_svc('f');
     $f->set_respawn_on_stop(1);
     $f->set_cmd(['perl', '-e', 'sleep 20; exit 0', ]);
-    $f->set_start_secs(0.10);
+    $f->set_startwait_secs(0.10);
     ok $f->is_stopped, "initially stopped";
     $f->start;
     wait_for_running($f);
@@ -137,7 +137,7 @@ my $ctrl = ControlFreak->new();
     my $g = $ctrl->find_or_create_svc('g');
     $g->set_respawn_on_stop(1);
     $g->set_cmd('sleep 20');
-    $g->set_start_secs(0.10);
+    $g->set_startwait_secs(0.10);
     ok $g->is_stopped, "initially stopped";
     $g->start;
     wait_for_running($g);
@@ -153,7 +153,7 @@ my $ctrl = ControlFreak->new();
     my $h = $ctrl->find_or_create_svc('h');
     $h->set_respawn_on_stop(1);
     $h->set_cmd(q|perl -e '$SIG{TERM}="IGNORE"; sleep 100'|);
-    $h->set_start_secs(0.10);
+    $h->set_startwait_secs(0.10);
     $h->set_stopwait_secs(0.3);
     $h->start;
     wait_for_running($h);

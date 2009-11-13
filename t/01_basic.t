@@ -191,7 +191,7 @@ use_ok 'ControlFreak::Console';
     $svc->set_cmd(q(perl -e 'warn $$; die "bye" if $ENV{die}; sleep 100;'));
 #    $svc->set_cmd(['perl', '-e', 'die "bye" if $ENV{die}; sleep 100;']);
     $svc->add_env( foo => "bar" );
-    $svc->set_start_secs(0.10);
+    $svc->set_startwait_secs(0.10);
     $svc->set_stopwait_secs(0.10);
     $svc->start;
     ok wait_for_running($svc), "waited for running" or diag $svc->state;

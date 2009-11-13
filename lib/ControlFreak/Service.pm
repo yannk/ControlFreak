@@ -13,7 +13,7 @@ use Params::Util qw{ _NUMBER _STRING _IDENTIFIER _ARRAY _POSINT };
 use POSIX qw{ SIGTERM SIGKILL };
 use Try::Tiny;
 
-use constant DEFAULT_START_SECS     => 1;
+use constant DEFAULT_STARTWAIT_SECS => 1;
 use constant DEFAULT_STOPWAIT_SECS  => 2;
 use constant DEFAULT_MAX_RETRIES    => 8;
 use constant BASE_BACKOFF_DELAY     => 0.3;
@@ -36,7 +36,7 @@ use Object::Tiny qw{
     tie_stdin_to
     ignore_stderr
     ignore_stdout
-    start_secs
+    startwait_secs
     stopwait_secs
     respawn_on_fail
     respawn_on_stop
@@ -367,9 +367,9 @@ sub start {
     $svc->{backoff_retry} = undef unless $svc->is_backoff;
     $svc->{state}         = 'starting';
 
-    my $start_secs = $svc->start_secs || DEFAULT_START_SECS;
+    my $startwait_secs = $svc->startwait_secs || DEFAULT_STARTWAIT_SECS;
     $svc->{start_cv} =
-        AE::timer $start_secs, 0, sub { $svc->_check_running_state };
+        AE::timer $startwait_secs, 0, sub { $svc->_check_running_state };
 
     if (my $proxy = $svc->{proxy}) {
         $proxy->start_service(%param, service => $svc);
@@ -453,7 +453,7 @@ sub _check_running_state {
     if (! $svc->pid) {
         if (my $proxy = $svc->{proxy}) {
             $svc->{ctrl}->log->warn(
-                "increase start_secs, proxy didn't have time to start service"
+                "increase startwait_secs, proxy didn't have time to start svc"
             );
             return;
         }
@@ -746,9 +746,9 @@ sub set_stopwait_secs {
     shift->_set('stopwait_secs', $value);
 }
 
-sub set_start_secs {
+sub set_startwait_secs {
     my $value = _NUMBER($_[1]) or return;
-    shift->_set('start_secs', $value);
+    shift->_set('startwait_secs', $value);
 }
 
 sub set_tie_stdin_to {
