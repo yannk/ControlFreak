@@ -20,10 +20,10 @@ sub wait_for_status {
 sub shutoff_logs {
     no warnings 'redefine';
     *ControlFreak::Logger::default_config = sub { \<<EOL
-log4perl.rootLogger=FATAL, NULL
+log4perl.rootLogger=DEBUG, NULL
 log4perl.appender.NULL=Log::Log4perl::Appender::Screen
 log4perl.appender.NULL.layout=SimpleLayout
-log4perl.Threshold = OFF
+log4perl.appender.NULL.Threshold = OFF
 EOL
     };
 }

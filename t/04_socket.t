@@ -13,7 +13,7 @@ use_ok 'ControlFreak::Socket';
 my $SOCKCAT = "$Find::Lib::Base/sockcat.pl";
 
 # can't shutoff logs since it's used later for testing
-#shutoff_logs();
+shutoff_logs();
 
 my $ctrl = ControlFreak->new();
 
