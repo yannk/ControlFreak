@@ -158,6 +158,7 @@ sub start_service {
         %stds,
     );
     $proxy->send_status('started', $name, $svc->{pid});
+    $proxy->verify_pid($svc);
 }
 
 sub prepare_child {
@@ -330,7 +331,8 @@ sub child_exit {
     my ($pid, $status) = @_;
     my ($svc) = grep { $_->{pid} == $pid } values %{ $proxy->{services} };
     unless ($svc) {
-        $proxy->log(err => "Unknown child of pid $pid");
+        $proxy->log(err => "Blacklisting yet unknown pid $pid");
+        $proxy->blacklist_pid($pid, $status);
         return;
     }
     $proxy->send_status('stopped', $svc->{name}, $pid, $status);
@@ -338,10 +340,36 @@ sub child_exit {
     delete $proxy->{services}{ $svc->{name} };
 }
 
+sub blacklist_pid {
+    my $proxy = shift;
+    my ($pid, $status) = @_;
+    $proxy->{pid_blacklist}->{$pid} = { time => time, exit_status => $status };
+}
+
+sub verify_pid {
+    my $proxy = shift;
+    my ($svc) = @_;
+    for my $pid (keys %{ $proxy->{pid_blacklist} }) {
+        my $bl = $proxy->{pid_blacklist}{$pid};
+        my $es = $bl->{exit_status};
+        if ($svc->{pid} == $pid) {
+            $proxy->send_status('stopped', $svc->{name}, $pid, $es);
+            $svc->{pid} = undef;
+            next;
+        }
+        my $time = $bl->{time};
+        if (time - $time > 5) {
+            $proxy->log(err => "Oops pid disappeared: $pid");
+        }
+    }
+    return;
+}
+
 sub run {
     my $proxy = shift;
 
     $SIG{CHLD} = sub {
+        ## Ideally we woudn't do much in there, to return quickly
         while ((my $pid = waitpid -1, &POSIX::WNOHANG) > 0) {
             $proxy->child_exit($pid, $?);
         }
