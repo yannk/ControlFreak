@@ -156,11 +156,18 @@ sub cmd_status {
 
         $uptime ||= "";
         $time   ||= "";
-        printf "%-8s %-20s %15s (%s)\n",
-            $statuses{$svcname}{status},
-            $svcname,
-            $uptime,
-            $time;
+        if ($time) {
+            printf "%-8s %-20s %15s (%s)\n",
+                $statuses{$svcname}{status},
+                $svcname,
+                $uptime,
+                $time;
+        }
+        else {
+            printf "%-8s %-30s\n",
+                $statuses{$svcname}{status},
+                $svcname,
+        }
     }
 }
 
