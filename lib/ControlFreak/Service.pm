@@ -111,7 +111,13 @@ sub new {
         unless exists $svc->{respawn_on_fail};
 
     $svc->{respawn_max_retries} = DEFAULT_MAX_RETRIES
-        unless exists $svc->{respawn_max_retries};
+        unless defined $svc->{respawn_max_retries};
+
+    $svc->{startwait_secs} = DEFAULT_STARTWAIT_SECS
+        unless defined $svc->{startwait_secs};
+
+    $svc->{stopwait_secs} = DEFAULT_STOPWAIT_SECS
+        unless defined $svc->{stopwait_secs};
 
     $svc->{ctrl} = $param{ctrl}
         or croak "Service requires a controller";
@@ -303,7 +309,7 @@ sub stop {
     $svc->{state}      = 'stopping';
     $svc->{wants_down} = 1;
 
-    my $stopwait_secs = $svc->stopwait_secs || DEFAULT_STOPWAIT_SECS;
+    my $stopwait_secs = $svc->stopwait_secs;
     $svc->{stop_cv} =
         AE::timer $stopwait_secs, 0, sub { $svc->_check_stopping_state };
 
@@ -367,7 +373,7 @@ sub start {
     $svc->{backoff_retry} = undef unless $svc->is_backoff;
     $svc->{state}         = 'starting';
 
-    my $startwait_secs = $svc->startwait_secs || DEFAULT_STARTWAIT_SECS;
+    my $startwait_secs = $svc->startwait_secs;
     $svc->{start_cv} =
         AE::timer $startwait_secs, 0, sub { $svc->_check_running_state };
 
