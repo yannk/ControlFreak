@@ -100,6 +100,7 @@ sub process_ok {
     ok wait_for_backoff($svc), "backoff" or diag $svc->state;
     $svc->set_respawn_max_retries(3);
     ok wait_for_fatal($svc, 4), "fatal" or diag $svc->state;
+    $proxy->shutdown;
 }
 
 ## valid commands
