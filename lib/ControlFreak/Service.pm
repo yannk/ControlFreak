@@ -366,6 +366,7 @@ sub start {
     return $svc->_err(%param, "Service '$svcname' has no known command")
         unless $cmd;
 
+    $svc->{restart_cv}    = undef;
     $svc->{start_time}    = time;
     $svc->{stop_time}     = undef;
     $svc->{wants_down}    = undef;
@@ -526,7 +527,26 @@ Restarts the service. i.e. stops it, then starts it.
 
 sub restart {
     my $svc = shift;
-    die "snif";
+    my %param = @_;
+    my $err = $param{err_cb} ||= sub {};
+    my $ok  = $param{ok_cb}  ||= sub {};
+    my $fail = 0;
+    $svc->stop(%param, ok_cb => sub { $fail = 0 }, err_cb => sub { $fail++ });
+    return $err->() if $fail;
+    my $stopwait_secs = $svc->stopwait_secs || DEFAULT_STARTWAIT_SECS;
+    my $delay = $stopwait_secs / 10;
+    my $tries = 0;
+    $svc->{restart_cv} = AE::timer 0.15, $delay, sub {
+        $tries++;
+        if ($tries > 150) {
+            $err->();
+            return;
+        }
+        return unless $svc->is_stopped;
+        $svc->{restart_cv} = undef;
+        return $svc->start(%param);
+    };
+    return;
 }
 
 =head2 proxy_as_text

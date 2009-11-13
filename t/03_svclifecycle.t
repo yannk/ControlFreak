@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 37;
+use Test::More tests => 42;
 require 'testutils.pl';
 use ControlFreak;
 use AnyEvent;
@@ -162,4 +162,24 @@ my $ctrl = ControlFreak->new();
     ok wait_for_stopping($h), "stopping";
     ok ! wait_for_stopped($h, .15), "still stopping! will need to kill it";
     ok wait_for_fail($h), "finally killed with SIGKILL" or diag $h->state;
+}
+
+## restart command
+{
+    my $i = $ctrl->find_or_create_svc('i');
+    $i->set_cmd(q|sleep 100|);
+    $i->set_startwait_secs(0.10);
+    $i->set_stopwait_secs(0.10);
+    $i->restart(
+        ok_cb => sub { ok 0, "oops, should have failed" },
+        err_cb => sub { ok 1, "failed as expected" },
+    );
+    ok $i->is_stopped, "stopped";
+    $i->start;
+    ok wait_for_running($i), "now running";
+    $i->restart(
+        ok_cb => sub { ok 1, "ok restarted" },
+        err_cb => sub { ok 0, "failed where it should have succeeded" },
+    );
+    ok wait_for_starting($i), "restarted" or diag $i->state;
 }
