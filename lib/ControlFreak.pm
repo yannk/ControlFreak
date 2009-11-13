@@ -199,7 +199,7 @@ sub load_config {
 
 =head2 services
 
-returns a list of L<ControlFreak::Service> instances known to this
+Returns a list of L<ControlFreak::Service> instances known to this
 controller.
 
 =cut
@@ -211,10 +211,11 @@ sub services {
 
 =head2 sockets
 
-returns a list of L<ControlFreak::Socket> instances known to this
+Returns a list of L<ControlFreak::Socket> instances known to this
 controller.
 
 =cut
+
 sub sockets {
     my $ctrl = shift;
     return values %{ $ctrl->{socketmap} };
@@ -222,7 +223,7 @@ sub sockets {
 
 =head2 service($name)
 
-Return the service of name C<$name> or nothing.
+Returns the service of name C<$name> or nothing.
 
 =cut
 
@@ -234,7 +235,7 @@ sub service {
 
 =head2 proxy($name)
 
-Return the proxy of name C<$name> or nothing.
+Returns the proxy of name C<$name> or nothing.
 
 =cut
 
@@ -246,8 +247,8 @@ sub proxy {
 
 =head2 set_console
 
-Take a L<ControlFreak::Console> instance in parameter and set it
-has the console.
+Takes a L<ControlFreak::Console> instance in parameter and sets it
+as the console.
 
 =cut
 
@@ -261,7 +262,7 @@ sub set_console {
 
 =head2 socket($name)
 
-Return the L<ControlFreak::Socket> object of name C<$name> or return
+Returns the L<ControlFreak::Socket> object of name C<$name> or returns
 undef.
 
 =cut
@@ -274,7 +275,7 @@ sub socket {
 
 =head2 add_socket($socket)
 
-Add the C<$socket> L<ControlFreak::Socket> object passed in parameters
+Adds the C<$socket> L<ControlFreak::Socket> object passed in parameters
 to the list of socket this controller knows about.
 
 If a socket by that name already exists, it returns undef, otherwise
@@ -292,6 +293,15 @@ sub add_socket {
     return 1;
 }
 
+=head2 remove_socket($socket_name)
+
+Removes the L<ControlFreak::Socket> object by the name of C<$socket_name>
+from the list of sockets this controller knows about.
+
+Returns true if effectively removed.
+
+=cut
+
 sub remove_socket {
     my $ctrl = shift;
     my $socket_name = shift;
@@ -300,7 +310,7 @@ sub remove_socket {
 
 =head2 add_proxy($proxy)
 
-Add the C<$proxy> L<ControlFreak::Proxy> object passed in parameters
+Adds the C<$proxy> L<ControlFreak::Proxy> object passed in parameters
 to the list of proxies this controller knows about.
 
 If a proxy by that name already exists, it returns undef, otherwise
@@ -318,11 +328,26 @@ sub add_proxy {
     return 1;
 }
 
+=head2 remove_proxy($proxy_name)
+
+Removes the L<ControlFreak::Proxy> object by the name of C<$proxy_name>
+from the list of proxies this controller knows about.
+
+Returns true if effectively removed.
+
+=cut
+
 sub remove_proxy {
     my $ctrl = shift;
     my $proxy_name = shift;
     return delete $ctrl->{proxymap}->{$proxy_name};
 }
+
+=head2 proxies
+
+Returns a list of proxy objects.
+
+=cut
 
 sub proxies {
     my $ctrl = shift;
@@ -353,6 +378,14 @@ sub find_or_create_svc {
     return $ctrl->{servicemap}{$svcname} = $svc;
 }
 
+=head2 find_or_create_sock($name)
+
+Given a socket name in parameter (a string), searches for an existing
+defined socket with that name, if not found, then a new socket is
+declared and returned.
+
+=cut
+
 sub find_or_create_sock {
     my $ctrl = shift;
     my $sockname = shift;
@@ -367,6 +400,14 @@ sub find_or_create_sock {
 
     return $ctrl->{socketmap}{$sockname} = $sock;
 }
+
+=head2 find_or_create_proxy($name)
+
+Given a proxy name in parameter (a string), searches for an existing
+defined proxy with that name, if not found, then a new proxy is
+declared and returned.
+
+=cut
 
 sub find_or_create_proxy {
     my $ctrl = shift;
@@ -385,7 +426,13 @@ sub find_or_create_proxy {
 
 =head2 logger
 
-return the logger attached to the controller
+Returns the logger attached to the controller.
+
+=cut
+
+=head2 services_by_tag($tag)
+
+Given a tag in parameter, returns a list of matching service objects.
 
 =cut
 
@@ -656,7 +703,7 @@ sub command_killll {
 
 =head2 shutdown
 
-cleanly exit all running commands, close all sockets etc...
+Cleanly exits all running commands, close all sockets etc...
 
 =cut
 

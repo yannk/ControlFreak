@@ -156,6 +156,7 @@ under the control of a L<ControlFreak::Proxy> object and contact the
 later to instruct it to start the service on our behalf.
 
 =cut
+
 sub start_service {
     my $proxy = shift;
     my %param = @_;
@@ -306,7 +307,7 @@ sub no_close_on_exec {
 
 =head2 run
 
-Run the proxy command.
+Runs the proxy command.
 
 =cut
 
@@ -387,7 +388,7 @@ sub run {
 
 =head2 shutdown
 
-Quit the proxy (and consequently stop all related services).
+Quits the proxy (and consequently stops all related services).
 
 =cut
 

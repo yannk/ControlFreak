@@ -86,7 +86,7 @@ ControlFreak::Service - Object representation of a service.
 
 =head1 DESCRIPTION
 
-This allow manipulation of a service and its state.
+This allows manipulation of a service and its state.
 
 =head1 METHODS
 
@@ -125,7 +125,7 @@ sub _err { ControlFreak::Util::error(@_) }
 
 =head2 is_fail
 
-return true if the state is 'failed'
+Returns true if the state is 'failed'
 
 =cut
 
@@ -136,7 +136,7 @@ sub is_fail {
 
 =head2 is_backoff
 
-return true if the state is 'backoff'
+Returns true if the state is 'backoff'
 
 =cut
 
@@ -147,7 +147,7 @@ sub is_backoff {
 
 =head2 is_fatal
 
-return true if the state is 'fatal'
+Returns true if the state is 'fatal'
 
 =cut
 
@@ -158,7 +158,7 @@ sub is_fatal {
 
 =head2 is_running
 
-return true if the state is 'runnnig'
+Returns true if the state is 'runnnig'
 
 =cut
 
@@ -169,7 +169,7 @@ sub is_running {
 
 =head2 is_starting
 
-return true if the state is 'starting'
+Returns true if the state is 'starting'
 
 =cut
 
@@ -180,7 +180,7 @@ sub is_starting {
 
 =head2 is_stopping
 
-return true if the state is 'stopping'
+Returns true if the state is 'stopping'
 
 =cut
 
@@ -191,7 +191,7 @@ sub is_stopping {
 
 =head2 is_stopped
 
-return true is service is stopped
+Returns true is service is stopped
 
 =cut
 
@@ -202,7 +202,7 @@ sub is_stopped {
 
 =head2 is_up
 
-return true is service is up
+Returns true is service is up
 
 =cut
 
@@ -221,7 +221,7 @@ sub is_up {
 
 =head2 is_down
 
-return true unless service is up
+Returns true unless service is up
 
 =cut
 
@@ -243,7 +243,7 @@ sub fail_reason {
 
 =head2 stop(%param)
 
-Initiate service shutdown.
+Initiates service shutdown.
 
 params are:
 
@@ -314,7 +314,7 @@ sub stop {
 
 =head2 start(%param)
 
-Initiate service startup and returns immediately.
+Initiates service startup and returns immediately.
 
 params are:
 
@@ -445,6 +445,7 @@ sub _exponential_backoff_delay {
 =head2 up(%param)
 
 XXX up the service (do nothing if already up)
+
 =cut
 
 sub up {
@@ -456,6 +457,7 @@ sub up {
 =head2 up(%param)
 
 XXX down the service (do nothing if already down)
+
 =cut
 
 sub down {
@@ -466,11 +468,20 @@ sub down {
 
 =head2 restart(%param)
 
+Restarts the service. i.e. stops it, then starts it.
+
 =cut
+
 sub restart {
     my $svc = shift;
     die "snif";
 }
+
+=head2 proxy_as_text
+
+A descriptive text representing service's proxy.
+
+=cut
 
 sub proxy_as_text {
     my $svc = shift;
@@ -483,7 +494,7 @@ sub proxy_as_text {
 
 =head2 status_as_text
 
-Return a text describing the service state.
+Returns a text describing the service state.
 It consists in tab separated list of fields:
 
 =over 2
@@ -517,7 +528,7 @@ sub status_as_text {
 
 =head2 desc_as_text
 
-Return a text describing the service and how to access it.
+Returns a text describing the service and how to access it.
 It consists in tab separated list of fields:
 
 =over 2
@@ -542,11 +553,19 @@ sub desc_as_text {
         qw/name tags_as_text desc proxy_as_text cmd/;
 }
 
+=head2 assign_proxy($proxy)
+
+=cut
+
 sub assign_proxy {
     my $svc = shift;
     $svc->{proxy} = shift;
     return 1;
 }
+
+=head2 assign_pid($pid)
+
+=cut
 
 sub assign_pid {
     my $svc = shift;
@@ -588,11 +607,15 @@ sub unset {
 
 =head2 tags
 
-Return a hashref of tags
+Returns a hashref of tags
+
+=head2 tags_as_text
+
+Returns tag as a descriptive text.
 
 =head2 tag_list
 
-Return a reference to a list of tags
+Returns a reference to a list of tags
 
 =cut
 
@@ -650,7 +673,7 @@ sub set_add_env {
 
 =head2 add_env($key => $value)
 
-Add an environment key, value pair to the service
+Adds an environment key, value pair to the service
 
 =cut
 
@@ -663,7 +686,7 @@ sub add_env {
 
 =head2 clear_env()
 
-Reset service environment to empty.
+Resets service environment to empty.
 
 =cut
 

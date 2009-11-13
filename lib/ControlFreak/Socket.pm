@@ -20,7 +20,7 @@ use AnyEvent::Socket();
 
 =head1 NAME
 
-ControlFreak::Socket - Define a (shared) socket controlled by ControlFreak
+ControlFreak::Socket - Defines a (shared) socket controlled by ControlFreak
 
 =cut
 
@@ -42,15 +42,15 @@ ControlFreak::Socket - Define a (shared) socket controlled by ControlFreak
 =head1 DESCRIPTION
 
 Each socket object has a unique name inside B<ControlFreak> controller,
-services interested in a socket just reference it using this name. In such
-situation, the controller pipes the socket to the children after forking,
+services interested in a socket just reference it using this name.
+The controller pipes the socket to children's stdin after forking,
 and before executing the service.
 
 =head1 METHODS
 
 =head2 new(%param)
 
-Create a socket objects. Params are:
+Creates a socket objects. Params are:
 
 =over 4
 
@@ -106,7 +106,7 @@ sub new {
 
 =head2 bind
 
-Create, bind the socket and put it in listen mode, then return
+Creates, binds the socket and puts it in listen mode, then returns
 immediately.
 Once bound, $socket->fh will return the filehandle.
 
@@ -196,7 +196,7 @@ sub is_bound {
 
 =head2 unbind()
 
-unbind and destroy the socket.
+Unbind and destroys the socket.
 
 =cut
 

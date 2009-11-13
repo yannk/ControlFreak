@@ -56,7 +56,7 @@ ControlFreak::Console - Handles all communications with ControlFreak
 
 =head2 start
 
-Start the console and return guard for it.
+Starts the console
 
 =cut
 
