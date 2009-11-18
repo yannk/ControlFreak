@@ -24,8 +24,12 @@ pod2usage(-verbose => 2) if $options{man};
 
 my $command = shift || pod2usage(2);
 
-my $socket = get_sock_from_addr($options{address})
-    or croak "Cannot get a socket for '$options{address}'";
+my $socket = get_sock_from_addr($options{address});
+if (! $socket) {
+    print STDERR "Cannot get a socket for '$options{address}'\n";
+    print STDERR "Maybe you need to start cfkd?\n";
+    exit -1;
+}
 
 my $cmd = "cmd_$command";
 
