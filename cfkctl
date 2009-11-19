@@ -334,6 +334,11 @@ sub cmd_pids {
     }
 }
 
+sub cmd_shutdown {
+    my $commander = shift;
+    $commander->send_request("command shutdown");
+}
+
 sub cmd_up      { _cmd_svc( "up",      @_ ) }
 sub cmd_down    { _cmd_svc( "down",    @_ ) }
 sub cmd_stop    { _cmd_svc( "stop",    @_ ) }
