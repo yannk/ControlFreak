@@ -47,7 +47,7 @@ use Object::Tiny qw{
     priority
 };
 
-=encoding utf-8
+=pod
 
 =head1 NAME
 
@@ -439,8 +439,6 @@ Kills the service. This is the brutal way of getting rid of service's process
 it will result in the program being uncleanly exited which will be reported
 later in the status of the service. This command is used when a service
 hasn't terminated after C<stopwait_secs>.
-
-=back
 
 =cut
 
