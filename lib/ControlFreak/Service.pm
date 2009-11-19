@@ -41,6 +41,7 @@ use Object::Tiny qw{
     respawn_on_fail
     respawn_on_stop
     respawn_max_retries
+    no_new_session
     user
     group
     priority
@@ -810,6 +811,12 @@ sub set_respawn_max_retries {
     shift->_set('respawn_max_retries', $value);
 }
 
+sub set_no_new_session {
+    my $value = _STRING($_[1]);
+    return unless defined $value;
+    shift->_set('no_new_session', $value);
+}
+
 sub _run_cmd {
     my $svc = shift;
     my $ctrl = $svc->{ctrl};
@@ -871,8 +878,11 @@ sub _run_cmd {
 
 sub prepare_child {
     my $svc = shift;
-    my $sessid = POSIX::setsid()
-        or $svc->{ctrl}->log->error("cannot create new session for service");
+    unless ($svc->no_new_session) {
+        my $sessid = POSIX::setsid();
+        $svc->{ctrl}->log->error("cannot create new session for service")
+            unless $sessid;
+    }
     $svc->setup_environment;
     return;
 }
