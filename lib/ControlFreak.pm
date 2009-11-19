@@ -527,7 +527,7 @@ sub _command_ctrl {
 
 ## for now, at least this is separated.
 ## but could we imagine a command start all running proxies as well?
-sub command_run {
+sub command_pup {
     my $ctrl = shift;
     my %param = @_;
 
@@ -545,7 +545,7 @@ sub command_run {
     return;
 }
 
-sub command_shutdown {
+sub command_pdown {
     my $ctrl = shift;
     my %param = @_;
 
