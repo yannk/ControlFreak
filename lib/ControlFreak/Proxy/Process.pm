@@ -237,8 +237,12 @@ sub fork_do_cmd {
                 POSIX::close($redir{$_});
             }
             else {
-                open $null, "+>/dev/null" unless $null
-                    or POSIX::_exit(124);
+                unless ($null) {
+                    unless (open $null, "+>/dev/null") {
+                        print STDERR "Error opening null: $!";
+                        POSIX::_exit(124);
+                    }
+                }
                 POSIX::close($_);
                 POSIX::dup2($null, $_);
             }
