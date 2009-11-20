@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 
+use Find::Lib 'lib';
 use File::Spec();
 use Getopt::Long;
 use AnyEvent();

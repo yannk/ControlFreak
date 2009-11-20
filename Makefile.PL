@@ -4,6 +4,7 @@ all_from 'lib/ControlFreak.pm';
 
 include 'Module:AutoInstall';
 
+requires 'Find::Lib';
 requires 'Pod::Usage';
 requires 'Try::Tiny';
 requires 'Object::Tiny';
@@ -14,7 +15,6 @@ requires 'AnyEvent';
 requires 'JSON::XS';
 
 build_requires 'Test::More';
-test_requires 'Find::Lib';
 
 install_script 'cfkd';
 install_script 'cfkctl';
