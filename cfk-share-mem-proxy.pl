@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 
-use Find::Lib './lib';
 use Getopt::Long;
 use AnyEvent();
 use Data::Dumper;
