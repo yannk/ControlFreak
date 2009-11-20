@@ -252,7 +252,7 @@ sub fork_do_cmd {
 
         my $ret = do $cmd;
         unless (defined $ret) {
-            print STDERR "Couldn't do '$cmd': $!";
+            print STDERR "Couldn't do '$cmd': $@";
             exit -1;
         }
         print STDERR "My job is done";
