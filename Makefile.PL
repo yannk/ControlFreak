@@ -8,7 +8,7 @@ requires 'Pod::Usage';
 requires 'Try::Tiny';
 requires 'Object::Tiny';
 requires 'Params::Util';
-requires 'Log4perl';
+requires 'Log::Log4perl';
 requires 'EV';
 requires 'AnyEvent';
 requires 'JSON::XS';
