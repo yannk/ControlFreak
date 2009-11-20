@@ -176,13 +176,14 @@ sub start_service {
     }
     my $hdl = $proxy->{command_hdl};
     my $descr = {
-        command       => 'start',
-        cmd           => $svc->cmd,
-        name          => $svc->name,
-        ignore_stderr => $svc->ignore_stderr,
-        ignore_stdout => $svc->ignore_stdout,
-        env           => $svc->env,
-        tie_stdin_to  => $svc->tie_stdin_to,
+        command        => 'start',
+        cmd            => $svc->cmd,
+        name           => $svc->name,
+        ignore_stderr  => $svc->ignore_stderr,
+        ignore_stdout  => $svc->ignore_stdout,
+        env            => $svc->env,
+        tie_stdin_to   => $svc->tie_stdin_to,
+        no_new_session => $svc->no_new_session,
     };
     my $string = encode_json($descr);
     $hdl->push_write("$string\n");

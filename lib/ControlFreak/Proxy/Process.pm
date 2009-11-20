@@ -172,8 +172,10 @@ sub prepare_child {
 
     my $name = $svc->{name};
     $0 = "[cfk $name] $cmd";
-    my $sessid = POSIX::setsid()
-        or print STDERR "cannot create a new session for proxied svc\n";
+    unless ($svc->{no_new_session}) {
+        my $sessid = POSIX::setsid()
+            or print STDERR "cannot create a new session for proxied svc\n";
+    }
 
     $proxy->setup_environment($svc);
 
