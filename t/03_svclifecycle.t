@@ -154,7 +154,7 @@ my $ctrl = ControlFreak->new();
 {
     my $h = $ctrl->find_or_create_svc('h');
     $h->set_respawn_on_stop(1);
-    $h->set_cmd(qq|$^X -e '\$SIG{TERM}="IGNORE"; sleep 100'|);
+    $h->set_cmd([$^X, '-e', '$SIG{TERM}="IGNORE"; sleep 100']);
     $h->set_startwait_secs(0.10);
     $h->set_stopwait_secs(0.3);
     $h->start;
