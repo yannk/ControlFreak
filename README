@@ -1,5 +1,53 @@
-This is WORK IN PROGRESS.
+This is WORK IN PROGRESS. Documentation is messy as well,
+don't hesitate to shoot questions directly.
 
-see lib/ControlFreak/Tutorial.pod
+What is ControlFreak?
+=====================
 
-for an introduction
+  see also: - lib/ControlFreak/Tutorial.pod
+            - lib/ControlFreak.pm (pod)
+
+ControlFreak's intent is to help you really control your (web) app (in
+production and in development) and your resources effectively.
+
+It's a process supervisor:
+
+- It fixes the mess of pid file management
+- It facilitates the roll-forward and backward of releases
+- It optionally controls the resources that your app needs
+  (essentially sockets) and make these resources available to your app using
+  a push model
+- ... and many other benefits like flexible logging/monitoring of everything
+
+It supervises any type of services. Examples:
+
+In Dev:
+- memcached
+- gearmand
+- perlbal
+- plack
+- workers
+- ddlockd
+
+In Prod:
+- gearman workers
+- schwartz workers
+- plack (web) workers)
+- (or, apache if you prefer)
+
+How does it work?
+=================
+
+It is a pure Perl implementation consisting in:
+- a controlling process: cfkd, which runs an AnyEvent loop usually running
+  in the background
+- a command line tool to talk to it: cfkctl
+- a configuration file (just a bunch of commands really)
+
+cfkd forks to start (exec) the services it controls.
+
+Optimally, cfkd binds sockets and share them with workers before forking
+(known as pre-fork module), it can also make you benefit from Copy On Write
+effect (sharing memory between all your workers for instance).
+
+At your command cfkd, restarts, stops, kills any service.
