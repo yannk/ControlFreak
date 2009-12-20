@@ -89,7 +89,8 @@ sub process_ok {
     ## backoff bug
     my $s = Find::Lib->catfile('..', 'cfk-share-mem-proxy.pl');
     my $p = Find::Lib->catfile('preload.pl');
-    $proxy->set_cmd("$^X $s --preload $p");
+    my $i = '-I ' . Find::Lib->catdir('../lib');
+    $proxy->set_cmd("$^X $i $s --preload $p");
     $proxy->run;
     ok $svc->{proxy}, "proxy is still there";
     is $svc->{proxy}, $proxy, "same proxy";
