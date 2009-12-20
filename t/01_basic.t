@@ -103,7 +103,6 @@ use_ok 'ControlFreak::Console';
     is  $svc->state, "starting";
 
     $svc->stop;
-    ## XXX Race condition?
     is $svc->state, "stopping";
     ok  $svc->is_stopping;
     ok  $svc->is_up, "is up";

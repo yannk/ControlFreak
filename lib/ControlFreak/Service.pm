@@ -318,7 +318,31 @@ sub stop {
         $proxy->stop_service(%param, service => $svc);
     }
     else {
-        kill -(SIGTERM), getpgrp($svc->pid);
+        my $pid = $svc->pid;
+        if (! $pid) {
+            my $msg = "Please retry in a bit, no pid yet";
+            if (! $svc->is_starting) {
+                $msg = "Something weird is going on. pid missing";
+            }
+            return $svc->_err(%param, $msg);
+        }
+        else {
+            ## check that we've created a session
+            my $has_new_session = !$svc->no_new_session;
+            if ($has_new_session) {
+                if (getpgrp($pid) == getpgrp(0)) {
+                    ## don't commit suicide, thank you.
+                    kill SIGTERM, $pid;
+                }
+                else {
+                    kill -(SIGTERM), getpgrp($pid);
+                }
+            }
+            else {
+                ## ok, only kill that one pid
+                kill SIGTERM, $pid;
+            }
+        }
     }
     $ok->();
     return 1;
