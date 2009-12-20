@@ -95,7 +95,7 @@ sub process_ok {
     ok $svc->{proxy}, "proxy is still there";
     is $svc->{proxy}, $proxy, "same proxy";
     ok $proxy->is_running, "proxy restarted";
-    $svc->set_cmd(qq{$^X -e 'die "die"'});
+    $svc->set_cmd(Find::Lib->catfile('die.pl'));
     $svc->start;
     ok wait_for_starting($svc), "starting" or diag $svc->state;
     ok wait_for_backoff($svc), "backoff" or diag $svc->state;

@@ -486,7 +486,8 @@ sub process_log {
     my $svc = $ctrl->service($svcname);
     unless ($svc) {
         $svcname ||= "";
-        $ctrl->log->error("Cannot find svc '$svcname' for proxy log");
+        chomp $msg;
+        $ctrl->log->error("Cannot find svc '$svcname' for proxy log. [$msg]");
         return;
     }
     $ctrl->log->proxy_svc_log([ $type, $svc, $msg ]);
