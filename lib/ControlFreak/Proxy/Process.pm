@@ -385,18 +385,22 @@ sub run {
 
     my $rs = $proxy->{read_select};
     my $ws = $proxy->{write_select};
-    while (my ($rout, $wout) = IO::Select->select($rs, $ws, undef)) {
-        for my $fh (@$rout) {
-            my $len = sysread($fh, my $buf, 16*1024);
-            if ($len <= 0) {
-                $rs->remove($fh);
-                close $fh;
+    while (1) {
+        while (my ($rout, $wout) = IO::Select->select($rs, $ws, undef)) {
+            for my $fh (@$rout) {
+                my $len = sysread($fh, my $buf, 16*1024);
+                if ($len <= 0) {
+                    $rs->remove($fh);
+                    close $fh;
+                }
+                $proxy->dispatch_read($fh, \$buf);
             }
-            $proxy->dispatch_read($fh, \$buf);
+            for my $fh (@$wout) {
+                $proxy->dispatch_write($fh);
+            }
         }
-        for my $fh (@$wout) {
-            $proxy->dispatch_write($fh);
-        }
+        # it would be nice to have more log channels
+        #$proxy->log(debug => "select() interrupted with $!");
     }
 }
 
