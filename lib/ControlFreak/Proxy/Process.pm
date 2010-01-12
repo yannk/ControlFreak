@@ -256,7 +256,14 @@ sub fork_do_cmd {
             eval { $param{on_prepare}->(); 1 } or POSIX::_exit(123)
         }
 
-        my $ret = do $cmd;
+        my $ret;
+        if (my $code = $proxy->svc_coderef) {
+            ## ignore command alltogether
+            $ret = $code->();
+        }
+        else {
+            $ret = do $cmd;
+        }
         unless (defined $ret) {
             print STDERR "Couldn't do '$cmd': $@";
             exit -1;
