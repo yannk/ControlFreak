@@ -276,7 +276,7 @@ sub run_command {
     my $proxy = shift;
     my $cmd   = shift;
 
-    if (my $code = $proxy->svc_coderef) {
+    if (my $code = $proxy->{svc_coderef}) {
         ## ignore command alltogether
         return $code->();
     }
