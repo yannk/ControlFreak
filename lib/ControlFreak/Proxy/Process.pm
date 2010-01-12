@@ -256,14 +256,7 @@ sub fork_do_cmd {
             eval { $param{on_prepare}->(); 1 } or POSIX::_exit(123)
         }
 
-        my $ret;
-        if (my $code = $proxy->svc_coderef) {
-            ## ignore command alltogether
-            $ret = $code->();
-        }
-        else {
-            $ret = do $cmd;
-        }
+        my $ret = $proxy->run_command($cmd);
         unless (defined $ret) {
             print STDERR "Couldn't do '$cmd': $@";
             exit -1;
@@ -277,6 +270,17 @@ sub fork_do_cmd {
 
     %redir = (); # close child side of the fds
     return;
+}
+
+sub run_command {
+    my $proxy = shift;
+    my $cmd   = shift;
+
+    if (my $code = $proxy->svc_coderef) {
+        ## ignore command alltogether
+        return $code->();
+    }
+    return do $cmd;
 }
 
 sub stop_service {
