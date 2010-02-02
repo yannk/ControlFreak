@@ -2,8 +2,21 @@
 use strict;
 use warnings;
 
-use Find::Lib 'lib';
+my $base;
+
 use File::Spec();
+
+BEGIN {
+    if (-f File::Spec->catfile(qw(lib ControlFreak.pm))) {
+        require Find::Lib;
+        Find::Lib->import('lib');
+        $base = Find::Lib->base;
+    }
+    else {
+        $base = File::Spec->curdir;
+    }
+}
+
 use Getopt::Long;
 use AnyEvent();
 
@@ -11,8 +24,6 @@ use ControlFreak;
 use Carp;
 use Pod::Usage;
 use POSIX 'SIGTERM';
-
-my $base = $Find::Lib::Base;
 
 my %options;
 GetOptions(
