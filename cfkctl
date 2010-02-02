@@ -260,11 +260,11 @@ sub _reltime {
     elsif ( $ddur <= 1 ) {
         my $dur = $now - $past;
         my $hdur = $dur->in_units('hours');
-        if ($hdur > 1) {
+        if ($hdur >= 1) {
             return sprintf "%2d hours ago", $hdur;
         }
         my $mdur = $dur->in_units('minutes');
-        if ($mdur > 1) {
+        if ($mdur >= 1) {
             return sprintf "%2d minutes ago", $mdur;
         }
         my $sdur = $dur->in_units('seconds');
