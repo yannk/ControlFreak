@@ -40,7 +40,10 @@ pod2usage(-verbose => 2) if $options{man};
 
 pod2usage("please provide a config file") unless $options{config};
 
-my $config_file = File::Spec->rel2abs($options{config}, $base);
+my $config_file = File::Spec->file_name_is_absolute($options{config})
+    ? $options{config}
+    : File::Spec->rel2abs($options{config}, $base);
+
 croak "Config file doesn't exist" unless -e $config_file;
 croak "Can't read config file"    unless -r $config_file;
 
