@@ -9,7 +9,7 @@ use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Socket qw(SOCK_STREAM);
 
-my %options = ( address => "tcp://127.0.0.1:11311" );
+my %options = ( address => "unix:///tmp/cfkd.sock" );
 
 GetOptions(
     'y|yes'      => \$options{yes},

@@ -75,7 +75,7 @@ of the services it has the responsibities of, aren't lost.
 
   # create a very simple configuration
   $ cat > config <<END
-  console address=127.0.0.1:11311
+  console address=unix/:/tmp/cfkd.sock
   console full=on
   service svc1 cmd=sleep 100
   END
@@ -88,13 +88,13 @@ Then it declares a first service named C<svc1> which just sleeps for 100 seconds
 
   # start ControlFreak
   $ perl ./cfkd -c config -d
-  INFO - Admin interface started on 127.0.0.1:11311
+  INFO - Admin interface started on unix/:/tmp/cfkd.sock
 
 C<-d> starts C<cfkd> in daemon mode, the C<-c> flags just specifies the config
 to use.
 
 You can know use C<cfkctl> to inspect C<cfkd> status. This control script
-connects by default to C<127.0.0.1:11311>.
+connects by default to a unix socket at C</tmp/cfkd.sock>.
 
   $ perl ./cfkctl status
   stopped svc1
@@ -112,9 +112,7 @@ connects by default to C<127.0.0.1:11311>.
 Let's connect directly to the management port, it will give you a glimpse of
 the internals
 
-  $ telnet localhost 11311
-  Connected to localhost.
-  Escape character is '^]'.
+  $ socat readline unix:/tmp/cfkd.sock
 
 Now type "C<command status>", the server will respond with OK or ERROR (in
 the rest of this extract the line after is a line we type in the telnet
