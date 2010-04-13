@@ -120,7 +120,7 @@ sub process_console {
         $addr =~ s/\s//g if $addr;
         return $err->("invalid address: '$assignment'") unless $addr;
         my ($host, $service) =
-            AnyEvent::Socket::parse_hostport($addr, '8888');
+            AnyEvent::Socket::parse_hostport($addr, '11311');
 
         return $err->("cannot parse address '$assignment'") unless $host;
         $console->{host} = $host;
