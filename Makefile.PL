@@ -15,6 +15,7 @@ requires 'AnyEvent';
 requires 'JSON::XS';
 
 build_requires 'Test::More';
+build_requires 'Test::Exception';
 
 install_script 'cfkd';
 install_script 'cfkctl';
