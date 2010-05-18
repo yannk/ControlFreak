@@ -16,6 +16,7 @@ requires 'JSON::XS';
 
 build_requires 'Test::More';
 build_requires 'Test::Exception';
+build_requires 'Test::Deep';
 
 install_script 'cfkd';
 install_script 'cfkctl';
