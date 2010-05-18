@@ -20,7 +20,6 @@ install_script 'cfkd';
 install_script 'cfkctl';
 install_script 'cfk-share-mem-proxy.pl';
 
-use_test_base;
 auto_include_deps;
 author_tests('xt');
 auto_set_repository;
