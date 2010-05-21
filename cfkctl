@@ -9,7 +9,7 @@ use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Socket qw(SOCK_STREAM);
 
-my %options = ( address => "unix:///tmp/cfkd.sock" );
+my %options = ( address => "unix:/tmp/cfkd.sock" );
 
 GetOptions(
     'y|yes'      => \$options{yes},
@@ -47,26 +47,34 @@ $commander->exit;
 ## I'm pretty sure this doesn't work in AF_INET6
 sub get_sock_from_addr {
     my $address = shift;
-    if ($address =~ m!^tcp://(.+)!) {
-        my $peer = $1;
-        $peer =~ s{/+$}{};
+    my $unix_peer;
+
+    if ($address =~ m!^unix:(.+)!) {
+        $unix_peer = $1;
+    }
+    elsif ($address =~ m!^/!) {
+        $unix_peer = $address;
+    }
+    ## relative path to a socket. This is bad, maybe I'd better ignore it?
+    elsif ($address =~ m!^\w.*/! && $address !~ m!:!) {
+        $unix_peer = $address;
+    }
+    ## tcp
+    else {
+        $address =~ s{/+$}{};
         my $sock = IO::Socket::INET->new(
-            PeerAddr => $peer,
+            PeerAddr => $address,
             Proto    => 'tcp',
         );
         return unless $sock;
         $sock->autoflush(1);
         return $sock;
     }
-    elsif ($address =~ m!^unix://(.+)!) {
-        return IO::Socket::UNIX->new(
-            Type => SOCK_STREAM,
-            Peer => "/$1",
-        );
-    }
-    else {
-        return;
-    }
+
+    return IO::Socket::UNIX->new(
+        Type => SOCK_STREAM,
+        Peer => $unix_peer,
+    );
 }
 
 package ControlFreak::Commander;
@@ -417,8 +425,9 @@ cfkctl [options] command [svcref ...]
     -y, --yes           Run non-interactively without asking for confirmations
     -h, --help          Help
     -m, --man           More help
-    --address=SOCK      Unix or tcp socket to connect to ControlFreak
-                        [defaults to 127.0.0.1:11311]
+    --address=SOCK      UNIX or TCP socket to connect to ControlFreak
+                        See ADDRESS FORMAT below for more details
+                        [defaults to unix://tmp/cfkd.sock]
 
  Service commands: (take a list of service references in arguments)
     up                  Make sure service(s) is(are) up
@@ -489,3 +498,25 @@ one one server.
 
     ## remove a service reference completely
     cfkctl destroy syncer
+
+=head1 ADDRESS FORMAT
+
+C<cfkctl> can connect to a C<cfkd> process using a UNIX or INET socket,
+depending on what's the server is running (See C<cfkd> manpage for details
+on how to set that up). By default the UNIX socket at C</tmp/cfkd.sock> is
+used.
+
+Please look at the following examples to understand the format
+
+=over 4
+
+  /tmp/cfkd.sock            # same as the default (UNIX socket)
+  unix:/tmp/cfkd.sock       # same
+  tmp/cfkd.sock             # same (not recommended)
+
+  cfkd.sock                 # ambiguous, will resolve to UNIX socket
+
+  127.0.0.1:7000            # TCP socket on localhost port 7000
+  yourserver.com:6000       # TCP socket on yourserver.com port 6000
+
+=back
