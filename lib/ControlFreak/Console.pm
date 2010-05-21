@@ -65,9 +65,11 @@ sub start {
     my %param   = @_;
     my $ctrl = $console->{ctrl};
 
+    my $service = $console->service;
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
-        $ctrl->log->info("new connection to admin from $host:$port");
+        my $addr = $port || $service;
+        $ctrl->log->info("new connection to admin from $host:$addr");
         $console->accept_connection($fh, $host, $port);
     };
 
@@ -80,7 +82,6 @@ sub start {
 
     $console->{started} = 1;
     my $host = $console->host;
-    my $service = $console->service;
     my $guard = AnyEvent::Socket::tcp_server
                 $host, $service, $accept_cb, $prepare_cb;
     $console->{guard} = $guard;
