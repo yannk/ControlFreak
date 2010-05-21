@@ -123,11 +123,11 @@ __END__
 
 =head1 NAME
 
-cfk - the supervisor process for ControlFreak
+cfkd - the supervisor process for ControlFreak
 
 =head1 SYNOPSIS
 
-cfk [options]
+cfkd [options]
 
 Options:
 
@@ -144,7 +144,7 @@ Please see L<SYNOPSIS>.
 
 =head1 DESCRIPTION
 
-B<cfk> supervises other processes, making sure there are up or down
+B<cfkd> supervises other processes, making sure there are up or down
 when you want to, and provides flexible logging facility for those
 services.
 
