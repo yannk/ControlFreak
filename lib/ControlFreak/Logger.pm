@@ -32,9 +32,9 @@ sub new {
 
 sub default_config {
     return \<<EOFC
-    log4perl.rootLogger=INFO, SCREEN
-    log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
-    log4perl.appender.SCREEN.layout=SimpleLayout
+log4perl.rootLogger=INFO, SCREEN
+log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
+log4perl.appender.SCREEN.layout=SimpleLayout
 EOFC
 }
 
