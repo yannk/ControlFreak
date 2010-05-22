@@ -10,7 +10,7 @@ use Socket qw(SOCK_STREAM);
 sub parse_unix {
     my $address = shift || "";
 
-    if ($address =~ m!^unix:/?(.+)!) {
+    if ($address =~ m!^unix:(.+)!) {
         return $1;
     }
     elsif ($address =~ m!^/!) {
