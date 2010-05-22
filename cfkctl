@@ -502,7 +502,7 @@ one one server.
 =head1 ADDRESS FORMAT
 
 C<cfkctl> can connect to a C<cfkd> process using a UNIX or INET socket,
-depending on what's the server is running (See C<cfkd> manpage for details
+depending on what the server is running (See C<cfkd> manpage for details
 on how to set that up). By default the UNIX socket at C</tmp/cfkd.sock> is
 used.
 
