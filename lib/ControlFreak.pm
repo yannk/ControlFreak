@@ -5,9 +5,9 @@ use 5.008_001;
 our $VERSION = '0.01';
 
 use Object::Tiny qw{
-    config_file
     log
     console
+    home
 };
 
 use Carp;
@@ -32,7 +32,7 @@ ControlFreak - a process supervisor
     ## the shell
 
     $ctrl = ControlFreak->new(
-        config_file => $config_file,
+        log_config_file => $log_config_file,
     );
     $ctrl->run; # enter the event loop, returns only for exiting
 
@@ -52,8 +52,6 @@ ControlFreak - a process supervisor
     $ctrl->set_console($con);
     $con = $ctrl->console;
     $log = $ctrl->log;
-
-    $ctrl->reload_config;
 
 =head1 DESCRIPTION
 
@@ -166,35 +164,15 @@ sub new {
     $ctrl->{proxymap}   = {};
 
     my $log_config_file;
-    $log_config_file = File::Spec->rel2abs($param{log_config_file}, $base)
-        if defined $param{log_config_file};
+    my $home = $param{home};
+    $log_config_file = File::Spec->rel2abs($param{log_config_file}, $home)
+        if defined $param{log_config_file} && $home;
 
     $ctrl->{log} = ControlFreak::Logger->new(
         config_file => $log_config_file,
     );
 
     return $ctrl;
-}
-
-=head2 load_config
-
-This should only be called once when the controller is created,
-it loads the initial configuration from disk and for that reason
-it's done with special privileges.
-
-=cut
-
-sub load_config {
-    my $ctrl = shift;
-    return ControlFreak::Command->from_file(
-        ctrl         => $ctrl,
-        file         => $ctrl->config_file,
-        has_priv     => 1,
-        fatal_errors => 1,
-        err_cb       => sub {
-            warn "error in config: " . ( $_[0] || "" );
-        },
-    );
 }
 
 =head2 services
@@ -654,27 +632,6 @@ sub command_proxy_status {
         push @out, $_->status_as_text;
     }
     $ok->(join "\n", @out);
-}
-
-## reload initial configuration
-sub command_reload_config {
-    my $ctrl  = shift;
-    my %param = @_;
-
-    ## avoid recursion
-    return if $param{ignore_reload};
-
-    $ctrl->log->info("Reloading initial config file");
-    my $errors = 0;
-    return ControlFreak::Command->from_file(
-        %param,
-        ctrl         => $ctrl,
-        file         => $ctrl->config_file,
-        has_priv     => $ctrl->console->full,
-        fatal_errors => 0,
-        skip_console => 1,
-    );
-    return;
 }
 
 sub command_bind {

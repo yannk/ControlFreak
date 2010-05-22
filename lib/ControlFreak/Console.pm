@@ -24,6 +24,7 @@ sub new {
     Scalar::Util::weaken($console->{ctrl});
     $console->{started} = 0;
     $param{ctrl}->set_console($console);
+    $console->{full} = 1;
     return $console;
 }
 

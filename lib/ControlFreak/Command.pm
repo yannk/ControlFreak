@@ -85,62 +85,6 @@ sub process {
     return $h->( $class, %param, cmd => $rest );
 }
 
-sub process_console {
-    my $class = shift;
-    my %param = @_;
-
-    my $cmd  = $param{cmd};
-    my $ok   = $param{ok_cb} || sub {};
-    my $err  = $param{err_cb} || sub {};
-    my $ctrl = $param{ctrl};
-
-    my $console = $ctrl->console;
-    return $err->("there is a console already")
-        if $console && $console->started;
-
-    unless ($console) {
-        $console = ControlFreak::Console->new(ctrl => $ctrl);
-    }
-
-    return $err->("not authorized")
-        unless $param{has_priv};
-
-    my ($attr, $assignment);
-    if ($cmd =~ /^([\w-]+)\s*=\s*(\S+)$/) {
-        $attr       = $1;
-        $assignment = $2 || "";
-    }
-    else {
-        return $err->("malformed console command '$cmd'");
-    }
-
-    my $success = 1;
-    if ($attr eq 'address') {
-        my $addr = $assignment;
-        $addr =~ s/\s//g if $addr;
-        return $err->("invalid address: '$assignment'") unless $addr;
-        my ($host, $service) =
-            AnyEvent::Socket::parse_hostport($addr, '11311');
-
-        return $err->("cannot parse address '$assignment'") unless $host;
-        $console->{host} = $host;
-        $console->{service} = $service;
-        $success = 1;
-    }
-    if ($attr eq 'full') {
-        my $value = _STRING($assignment);
-        unless (defined $value) {
-            return $err->("invalid value for console.full");
-        }
-        return $err->("incorrect boolean for console.full")
-            unless defined ($value = _as_bool($value));
-        $console->{full} = $value;
-    }
-
-    return $ok->($console) if $success;
-    return $err->("unknown console attribute: '$attr'");
-}
-
 sub process_service {
     my $class = shift;
     my %param = @_;

@@ -2,61 +2,89 @@
 use strict;
 use warnings;
 
-my $base;
-
 use File::Spec();
 
 BEGIN {
     if (-f File::Spec->catfile(qw(lib ControlFreak.pm))) {
         require Find::Lib;
         Find::Lib->import('lib');
-        $base = Find::Lib->base;
-    }
-    else {
-        $base = File::Spec->curdir;
     }
 }
 
 use Getopt::Long;
 use AnyEvent();
+use AnyEvent::Socket();
 
 use ControlFreak;
 use Carp;
 use Pod::Usage;
 use POSIX 'SIGTERM';
 
-my %options;
-GetOptions(
-    "c|config=s" => \$options{config},
-    "d|daemon"   => \$options{daemon},
-    "t|trap"     => \$options{trap},
+my %options = ( address => "unix:$ENV{HOME}/.controlfreak/sock" );
 
-    'h|help'     => \$options{help},
-    'm|man'      => \$options{man},
+GetOptions(
+    "a|address=s"     => \$options{address},
+    "d|daemon"        => \$options{daemon},
+    "t|trap"          => \$options{trap},
+    "home=s"          => \$options{home},
+    "full-console"    => \$options{full_console},
+    "log-config-file" => \$options{log_config_file},
+
+    'h|help'          => \$options{help},
+    'm|man'           => \$options{man},
 );
 
 pod2usage(1)             if $options{help};
 pod2usage(-verbose => 2) if $options{man};
 
-pod2usage("please provide a config file") unless $options{config};
-
-my $config_file = File::Spec->file_name_is_absolute($options{config})
-    ? $options{config}
-    : File::Spec->rel2abs($options{config}, $base);
-
-croak "Config file doesn't exist" unless -e $config_file;
-croak "Can't read config file"    unless -r $config_file;
-
 my $ctrl;
+
+## make home
+my $home = $options{home} || File::Spec->catdir($ENV{HOME}, '.controlfreak');
+mkdir $home unless -d $home;
+
+my $log_config_file = $options{log_config_file};
+if (! $log_config_file) {
+    ## look at the default location and create it if it doesn't exist
+    $log_config_file = File::Spec->catfile($home, "log.config");
+    unless (-f $log_config_file) {
+        open LC, ">$log_config_file"
+            or croak "Cannot create $log_config_file: $!";
+        print LC ${ ControlFreak::Logger->default_config };
+        close LC;
+    }
+}
 
 daemonize() if $options{daemon};
 
-$ctrl = ControlFreak->new( config_file => $config_file, base => $base );
-$ctrl->load_config;
+my $unix = ControlFreak::Util::parse_unix($options{address});
 
-if ($ctrl->console) {
-    $ctrl->console->start;
+my $host;
+my $service;
+if ($unix) {
+    $host = "unix/";
+    $service = $unix;
 }
+else {
+    ($host, $service) = AnyEvent::Socket::parse_hostport(
+        $options{address},
+        '11311',
+    );
+}
+
+$ctrl = ControlFreak->new(
+    log_config_file => $log_config_file,
+    home            => $home,
+);
+
+my $console = ControlFreak::Console->new(
+    host    => $host,
+    service => $service,
+    ctrl    => $ctrl,
+);
+
+$ctrl->set_console($console);
+$ctrl->console->start;
 
 ## probably need to deal with signals
 AnyEvent->condvar->recv;
@@ -131,12 +159,24 @@ cfkd [options]
 
 Options:
 
- -c, --config=<file>  Path to a configuration file to use
+ --home=<directory>  Path to cfkd home directory [default: $HOME/.controlfreak]
+ -a, --address=<socket address>
+                     Path to UNIX socket file or address of INET socket
+                     e.g: unix:/tmp/cfkd.sock or localhost:11311
+                     [default: $home/sock]
 
- -d, --daemon         Run as a daemon
- -t, --trap           Trap and ignore normal signals (ignored unless -d)
- -h, --help           Help
- -m, --man            More help
+ -l, --log-config-file=<file>
+                     Path to cfkd log config file, cfkd will attempt to create
+                     a default config file if the file doesn't exist.
+                     [default: $home/log.config]
+
+ -d, --daemon        Run as a daemon
+ -t, --trap          Trap and ignore normal signals (ignored unless -d)
+
+ --full-console      If set, then the console is completely unrest
+
+ -h, --help          Help
+ -m, --man           More help
 
 =head1 OPTIONS
 

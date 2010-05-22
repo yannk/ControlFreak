@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 89;
+use Test::More tests => 88;
 use Test::Exception;
 use ControlFreak;
 use AnyEvent;
@@ -15,7 +15,6 @@ use_ok 'ControlFreak::Console';
 {
     my $ctrl = ControlFreak->new();
     isa_ok $ctrl, 'ControlFreak';
-    ok !$ctrl->config_file, "no config";
     ok !$ctrl->console, "no console";
     ok !$ctrl->services, "no services";
 }

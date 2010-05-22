@@ -2,14 +2,12 @@
 use strict;
 use warnings;
 
+use Carp;
+use ControlFreak::Util;
 use Getopt::Long;
 use Pod::Usage;
-use Carp;
-use IO::Socket::INET;
-use IO::Socket::UNIX;
-use Socket qw(SOCK_STREAM);
 
-my %options = ( address => "unix:/tmp/cfkd.sock" );
+my %options = ( address => "unix:/$ENV{HOME}/.controlfreak/sock" );
 
 GetOptions(
     'y|yes'      => \$options{yes},
@@ -24,7 +22,7 @@ pod2usage(-verbose => 2) if $options{man};
 
 my $command = shift || pod2usage(2);
 
-my $socket = get_sock_from_addr($options{address});
+my $socket = ControlFreak::Util::get_sock_from_addr($options{address});
 if (! $socket) {
     print STDERR "Cannot get a socket for '$options{address}'\n";
     print STDERR "Maybe you need to start cfkd?\n";
@@ -43,39 +41,6 @@ else {
 }
 
 $commander->exit;
-
-## I'm pretty sure this doesn't work in AF_INET6
-sub get_sock_from_addr {
-    my $address = shift;
-    my $unix_peer;
-
-    if ($address =~ m!^unix:(.+)!) {
-        $unix_peer = $1;
-    }
-    elsif ($address =~ m!^/!) {
-        $unix_peer = $address;
-    }
-    ## relative path to a socket. This is bad, maybe I'd better ignore it?
-    elsif ($address =~ m!^\w.*/! && $address !~ m!:!) {
-        $unix_peer = $address;
-    }
-    ## tcp
-    else {
-        $address =~ s{/+$}{};
-        my $sock = IO::Socket::INET->new(
-            PeerAddr => $address,
-            Proto    => 'tcp',
-        );
-        return unless $sock;
-        $sock->autoflush(1);
-        return $sock;
-    }
-
-    return IO::Socket::UNIX->new(
-        Type => SOCK_STREAM,
-        Peer => $unix_peer,
-    );
-}
 
 package ControlFreak::Commander;
 use strict;
