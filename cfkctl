@@ -333,6 +333,28 @@ sub _cmd_svc {
     }
 }
 
+sub cmd_load {
+    my $commander = shift;
+    my ($file) = @_;
+    unless (defined $file && length $file) {
+        croak "please specify a file to load";
+    }
+    unless (-f $file && -r _) {
+        croak "Error, file '$file' is not readable";
+    }
+    open my $fh, "<$file" or croak "Cannot open '$file': $!";
+    while (<$fh>) {
+        chomp;
+        next unless /\S/;
+        $commander->send_request($_);
+        my ($error) = $commander->read_response;
+        if ($error) {
+            croak "error: $error";
+        }
+    }
+    close $fh;
+}
+
 sub read_response {
     my $commander = shift;
     my $socket = $commander->{socket};
