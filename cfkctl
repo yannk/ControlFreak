@@ -4,6 +4,7 @@ use warnings;
 
 use Carp;
 use ControlFreak::Util;
+use File::Spec();
 use Getopt::Long;
 use Pod::Usage;
 
@@ -12,6 +13,7 @@ my %options = ( address => "unix:/$ENV{HOME}/.controlfreak/sock" );
 GetOptions(
     'y|yes'      => \$options{yes},
     'address=s'  => \$options{address},
+    'basedir=s'  => \$options{basedir},
 
     'h|help'     => \$options{help},
     'm|man'      => \$options{man},
@@ -31,7 +33,10 @@ if (! $socket) {
 
 my $cmd = "cmd_$command";
 
-my $commander = ControlFreak::Commander->new( $socket );
+my $commander = ControlFreak::Commander->new(
+    basedir => $options{basedir},
+    socket  => $socket,
+);
 
 if (my $coderef = $commander->can($cmd)) {
     $coderef->($commander, @ARGV);
@@ -58,7 +63,10 @@ BEGIN {
     $can_color    = -t STDOUT;
 };
 
-sub new { bless { 'socket' => $_[1] }, $_[0] };
+sub new {
+    my $class = shift;
+    return bless { @_ }, $class,
+};
 
 sub send_request {
     my $commander = shift;
@@ -336,6 +344,8 @@ sub _cmd_svc {
 sub cmd_load {
     my $commander = shift;
     my ($file) = @_;
+    my $base = $commander->{basedir}
+             || File::Spec->rel2abs(File::Spec->curdir);
     unless (defined $file && length $file) {
         croak "please specify a file to load";
     }
@@ -345,7 +355,8 @@ sub cmd_load {
     open my $fh, "<$file" or croak "Cannot open '$file': $!";
     while (<$fh>) {
         chomp;
-        next unless /\S/;
+        next unless /\S/;   # skip empty lines (void commands)
+        s/\${BASE}/$base/;  # substitute configured base
         $commander->send_request($_);
         my ($error) = $commander->read_response;
         if ($error) {
@@ -412,6 +423,8 @@ cfkctl [options] command [svcref ...]
     -y, --yes           Run non-interactively without asking for confirmations
     -h, --help          Help
     -m, --man           More help
+    --basedir=<dir>     change BASE (for the load command)
+                        [defaults to current directory]
     --address=SOCK      UNIX or TCP socket to connect to ControlFreak
                         See ADDRESS FORMAT below for more details
                         [defaults to unix://tmp/cfkd.sock]
