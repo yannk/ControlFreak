@@ -69,8 +69,10 @@ sub start {
     my $service = $console->service;
     my $accept_cb = sub {
         my ($fh, $host, $port) = @_;
-        my $addr = $port || $service;
-        $ctrl->log->info("new connection to admin from $host:$addr");
+        my $addr = $host eq 'unix/'
+                 ? "$host:$service"
+                 :  AnyEvent::Socket::format_hostport($host, $port);
+        $ctrl->log->info("new connection to admin from $addr");
         $console->accept_connection($fh, $host, $port);
     };
 
