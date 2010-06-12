@@ -83,6 +83,10 @@ my $console = ControlFreak::Console->new(
     ctrl    => $ctrl,
 );
 
+my $w = AnyEvent->signal(signal => "USR1", cb => sub {
+    $ctrl->log->safe_reinit;
+});
+
 $ctrl->set_console($console);
 $ctrl->console->start;
 

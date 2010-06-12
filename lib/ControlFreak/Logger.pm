@@ -7,6 +7,7 @@ use Log::Log4perl();
 
 use Object::Tiny qw{ config_file };
 use Params::Util qw{ _STRING };
+use Try::Tiny;
 
 our $CURRENT_SVC_PID;
 
@@ -28,6 +29,26 @@ sub new {
         Log::Log4perl->init( $logger->default_config );
     }
     return $logger;
+}
+
+sub safe_reinit {
+    my $logger = shift;
+    unless ($logger->config_file) {
+        $logger->warn("Ignored USR1, running with file-less config");
+        return;
+    }
+    $logger->info("Reloading log config");
+    try {
+        Log::Log4perl->init($logger->config_file);
+        $logger->info("Log config reloaded");
+    }
+    catch {
+        ## damn ugly
+        warn "reloading config failed";
+        use Log::Log4perl::Logger;
+        Log::Log4perl::Config->_init(undef, $Log::Log4perl::Config::OLD_CONFIG);
+        $logger->error("There is an error in my config. Aborting. ($_)");
+    };
 }
 
 sub default_config {
