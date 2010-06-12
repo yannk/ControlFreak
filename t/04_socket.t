@@ -111,7 +111,7 @@ my $ctrl = ControlFreak->new();
     for (2..6) {
         say_socket($sock => "iter$_");
     }
-    wait_for(sub { scalar(split "\n", $test->buffer) == 5  });
+    wait_for(sub { my @a = split /\n/, $test->buffer; @a == 5  });
     my $buffer = $test->buffer;
     my @logs = split "\n", $buffer;
     is scalar @logs, 5, "5, the last one got lost (no children connected)";
