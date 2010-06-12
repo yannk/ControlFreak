@@ -22,6 +22,9 @@ install_script 'bin/cfkd';
 install_script 'bin/cfkctl';
 install_script 'bin/cfk-share-mem-proxy.pl';
 
+recommends 'DateTime';
+recommends 'Term::ANSIColor';
+
 auto_include_deps;
 author_tests('xt');
 auto_set_repository;
