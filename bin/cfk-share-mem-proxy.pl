@@ -24,7 +24,11 @@ pod2usage(1)             if $options{help};
 pod2usage(-verbose => 2) if $options{man};
 
 croak "Please, specify a preload option" unless $options{preload};
-require $options{preload};
+my $svc_coderef;
+my $ret = require $options{preload};
+if ($ret && ref $ret eq 'CODE') {
+    $svc_coderef = $ret;
+}
 croak "Error preloading: $@" if $@;
 
 my $cfd = $ENV{_CFK_COMMAND_FD} or die "no command fd";
@@ -49,6 +53,7 @@ $proxy = ControlFreak::Proxy::Process->new(
     status_fh   => $sfh,
     log_fh      => $lfh,
     sockets     => $sockets,
+    svc_coderef => $svc_coderef,
 );
 
 $proxy->log('out', "$0 proxy started");
