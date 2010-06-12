@@ -87,7 +87,7 @@ sub process_ok {
     ok $svc->is_fail or diag $svc->state;
 
     ## backoff bug
-    my $s = Find::Lib->catfile('..', 'cfk-share-mem-proxy.pl');
+    my $s = Find::Lib->catfile('..', 'bin', 'cfk-share-mem-proxy.pl');
     my $p = Find::Lib->catfile('preload.pl');
     my $i = Find::Lib->catdir('../lib');
     $proxy->set_cmd("$^X -I $i $s --preload $p");

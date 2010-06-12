@@ -18,9 +18,9 @@ build_requires 'Test::More';
 build_requires 'Test::Exception';
 build_requires 'Test::Deep';
 
-install_script 'cfkd';
-install_script 'cfkctl';
-install_script 'cfk-share-mem-proxy.pl';
+install_script 'bin/cfkd';
+install_script 'bin/cfkctl';
+install_script 'bin/cfk-share-mem-proxy.pl';
 
 auto_include_deps;
 author_tests('xt');
