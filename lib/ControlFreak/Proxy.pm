@@ -7,7 +7,7 @@ use Carp;
 use ControlFreak::Util;
 use Fcntl qw(F_GETFD F_SETFD FD_CLOEXEC);
 use JSON::XS;
-use Object::Tiny qw{ name cmd pid is_running };
+use Object::Tiny qw{ name cmd pid is_running env };
 use Params::Util qw{ _ARRAY _STRING };
 use POSIX 'SIGTERM';
 use Scalar::Util();
@@ -87,6 +87,7 @@ sub new {
     my $proxy = $class->SUPER::new(%param);
     $proxy->{ctrl} = $ctrl;
     $proxy->{servicemap} = {};
+    $proxy->{env}  ||= {};
     unless ($ctrl->add_proxy($proxy)) {
         $ctrl->log->error("A proxy by that name already exists");
         return;
@@ -220,6 +221,49 @@ sub unset {
     return 1;
 }
 
+sub setup_environment {
+    my $proxy = shift;
+    my $env = $proxy->env;
+    return unless $env;
+    return unless ref $env eq 'HASH';
+    while (my ($k, $v) = each %$env) {
+        $ENV{$k} = $v;
+    }
+    return 1;
+}
+
+sub set_add_env {
+    my $proxy = shift;
+    my $value = _STRING($_[0]) or return;
+    my ($key, $val) = split /=/, $value, 2;
+    $proxy->{ctrl}->log->debug( "Setting ENV{$key} to '$val'" );
+    $proxy->add_env($key, $val);
+}
+
+=head2 add_env($key => $value)
+
+Adds an environment key, value pair to the proxy
+
+=cut
+
+sub add_env {
+    my $proxy = shift;
+    my ($key, $value) = @_;
+    $proxy->env->{$key} = $value;
+    return 1;
+}
+
+=head2 clear_env()
+
+Resets proxy environment to empty.
+
+=cut
+
+sub clear_env {
+    my $proxy = shift;
+    $proxy->{env} = {};
+}
+
 sub set_cmd {
     my $value = (ref $_[1] ? _ARRAY($_[1]) : _STRING($_[1])) or return;
     shift->_set('cmd', $value);
@@ -338,6 +382,7 @@ sub run {
         '$$'       => \$proxy->{pid},
         close_all  => 0,
         on_prepare => sub {
+            $proxy->setup_environment;
             $proxy->prepare_child_fds($cr, $sw, $lw);
         },
     );
