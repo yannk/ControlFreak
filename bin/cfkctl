@@ -363,6 +363,7 @@ sub cmd_load {
     while (<$fh>) {
         chomp;
         next unless /\S/;   # skip empty lines (void commands)
+        next if /^\s*#/;    # skip comments (void commands)
         s/\${BASE}/$base/;  # substitute configured base
         $commander->send_request($_);
         my ($error) = $commander->read_response;
