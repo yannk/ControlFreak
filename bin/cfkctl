@@ -183,7 +183,7 @@ sub cmd_proxy_status {
             }
             $string_status = color($color) . $status . color('reset');
         }
-        printf "%-6s %-20s %6s\n", $string_status, $st{name}, $st{pid};
+        printf "%-6s %-20s %6s\n", $string_status, $st{name}, ($st{pid} || "");
     }
 }
 
