@@ -344,15 +344,22 @@ sub _cmd_svc {
 sub cmd_load {
     my $commander = shift;
     my ($file) = @_;
+
     my $base = $commander->{basedir}
              || File::Spec->rel2abs(File::Spec->curdir);
     unless (defined $file && length $file) {
         croak "please specify a file to load";
     }
-    unless (-f $file && -r _) {
-        croak "Error, file '$file' is not readable";
+    my $fh;
+    if ($file eq '-') {
+        $fh = *STDIN;
     }
-    open my $fh, "<$file" or croak "Cannot open '$file': $!";
+    else {
+        unless (-f $file && -r _) {
+            croak "Error, file '$file' is not readable";
+        }
+        open $fh, "<$file" or croak "Cannot open '$file': $!";
+    }
     while (<$fh>) {
         chomp;
         next unless /\S/;   # skip empty lines (void commands)
@@ -363,7 +370,7 @@ sub cmd_load {
             croak "error: $error";
         }
     }
-    close $fh;
+    close $fh unless $file eq '-';
 }
 
 sub read_response {
