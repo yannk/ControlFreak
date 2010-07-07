@@ -192,6 +192,7 @@ sub setup_environment {
         $ENV{$k} = $v;
     }
     $ENV{CONTROL_FREAK_ENABLED} = 1;
+    $ENV{CONTROL_FREAK_SERVICE} = $svc->name;
     return 1;
 }
 
