@@ -248,10 +248,6 @@ sub fork_do_cmd {
                 POSIX::dup2($null, $_);
             }
         }
-        ## now close all remaining fds;
-        my $fd_max = eval { POSIX::sysconf (POSIX::_SC_OPEN_MAX ()) - 1 }
-                     || 1023;
-        POSIX::close($_) for (3 .. $fd_max);
 
         if (exists $param{on_prepare}) {
             eval { $param{on_prepare}->(); 1 } or POSIX::_exit(123)
