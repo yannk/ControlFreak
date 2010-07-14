@@ -28,8 +28,9 @@ ControlFreak - a process supervisor
 
 =head1 SYNOPSIS
 
-    ## see L<cvk> and L<cvkctl> manpages for how to run ControlFreak from
-    ## the shell
+    ## WARNING
+    ## see L<cfkd> and L<cfkctl> manpages for how to run ControlFreak from
+    ## the shell. This is the programatic interface used by these scripts.
 
     $ctrl = ControlFreak->new(
         log_config_file => $log_config_file,
@@ -55,88 +56,8 @@ ControlFreak - a process supervisor
 
 =head1 DESCRIPTION
 
-ControlFreak is a process supervisor. It consists in a set of pure
-Perl classes, a controlling process usually running in the background and
-a command line tool to talk to it.
-
-Instances of this main L<ControlFreak> class are called controller, C<ctrl>.
-
-The supervisor/controller process is running in an EventLoop and forks
-to start (exec) the services it controls.
-
-It is not a replacement for the init process, init.d etc... The initial goal
-of ControlFreak is to simplify the management of all the processes required
-to run a modern web application. An average web app would use:
-
-=over 4
-
-=item * Memcached
-
-=item * A web reverse proxy or balancer, like Perlbal
-
-=item * Multiple kind of workers
-
-=item * A web server or an application server (apache, fastcgi, ...)
-
-=back
-
-More complex environments add a lot of additional services.
-
-In production you want to tightly control those, making sure there are up
-and running nominally. You also want an easy way to do code pushes and soft
-roll releases.
-
-In development you usually want to duplicate the production stack which is
-a lot of services that you have to tweak and sometimes restart repeatedly, and
-be able to slightly tweak based on the developer, the code branch etc...
-
-In test, you want a few of these services, and you want to programatically
-control them (making sure there are up or down)
-
-Pid management is always a nightmare when you want to cover all these needs.
-
-=head1 WHY?
-
-There are many similar programs freely available, but as stated above,
-ControlFreak does a few things differently (and hopefully better), also having
-ControlFreak written in Perl can be an important acceptance factor for some
-software shops :)
-
-C<ControlFreak> is also designed to be as simple as permitted. In order to keep
-the Core C<ControlFreak> stable, easy to understand and easy to run, there
-should be little added to the core features of running services and providing
-means to control them. For instance, C<ControlFreak> doesn't have on the
-roadmap to develop features to auto-restart process if they use too much
-memory, or to email you when some process has a snafu. We believe you can have
-another script/process interfacing with C<ControlFreak> which does exactly
-that.
-
-C<ControlFreak> wants to do one thing and only one thing well, and that thing
-is: B<run services, provide means to control their lifecycle>.
-
-=head1 WHAT CONTROLFREAK ISN'T?
-
-From the above, it results, that B<ControlFreak> is no:
-
-=over 2
-
-=item * web/xmlrpc server
-
-=item * email/irc/im/xmpp client
-
-=item * memory watcher
-
-=item * application data store
-
-=item * restart scheduler
-
-=item * event bus for your services
-
-=item * sysinit replacement
-
-=back
-
-=cut
+This is the programmer documentation. Look into L<ControlFreak/Intro.pod>
+for user documentation.
 
 =head1 METHODS
 
@@ -689,5 +610,7 @@ supervisor processes. In the same class there is also runit and monit.
 More recent modules which inspired ControlFreak are God and Supervisord
 in Python. Surprisingly I didn't find any similar program in Perl. Some
 ideas in ControlFreak are subtely different though.
+
+EDIT: I've spotted Ubic recently on CPAN
 
 "If you have kids you probably know what I mean";
