@@ -41,7 +41,7 @@ my $commander = ControlFreak::Commander->new(
 
 if (my $coderef = $commander->can($cmd)) {
     my $out = $coderef->($commander, @ARGV);
-    print $out if defined $out;
+    print "$out\n" if defined $out && length $out;
 }
 else {
     croak "Sorry unknown command $command";
