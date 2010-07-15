@@ -57,6 +57,7 @@ if (! $log_config_file) {
             or croak "Cannot create $log_config_file: $!";
         print LC ${ ControlFreak::Logger->default_config };
         close LC;
+        chmod 0622 $log_config_file;
     }
 }
 
