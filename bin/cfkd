@@ -200,13 +200,6 @@ services.
 
 =head1 SAMPLE CONFIG
 
-  # management port
-  console address = 127.0.0.1:11311
-  console full = on # enable this only if you know what you are doing
-
-  ## log configuration
-  logger config = /etc/cfk/logger.conf
-
   service memcached cmd = /usr/bin/memcached -p 11211
   service memcached ignore_stderr = 1
   service memcached tags = prod
@@ -230,11 +223,7 @@ services.
   # start random stuff
   command up svc memcached
   command up svc perlbal
-  ## TODO
-  command down tag optional
 
-  ## TODO
-  load /etc/cfk.d/*.conf
 
 =head1 SAMPLE LOG CONFIG
 

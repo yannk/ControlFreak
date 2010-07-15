@@ -68,7 +68,7 @@ cfkctl [options] command [svcref ...]
                         [defaults to current directory]
     --address=SOCK      UNIX or TCP socket to connect to ControlFreak
                         See ADDRESS FORMAT below for more details
-                        [defaults to unix://tmp/cfkd.sock]
+                        [defaults to unix://$ENV{HOME}.controlfreak/sock]
 
  Service commands: (take a list of service references in arguments)
     up                  Make sure service(s) is(are) up
@@ -138,14 +138,14 @@ one one server.
     cfkctl pids
 
     ## remove a service reference completely
-    cfkctl destroy syncer
+    cfkctl destroy syncer # TODO
 
 =head1 ADDRESS FORMAT
 
 C<cfkctl> can connect to a C<cfkd> process using a UNIX or INET socket,
 depending on what the server is running (See C<cfkd> manpage for details
-on how to set that up). By default the UNIX socket at C</tmp/cfkd.sock> is
-used.
+on how to set that up). By default the UNIX socket named C<sock> in
+C<cfkd> home directory is used (Usually $ENV{HOME}/.controlfreak/).
 
 Please look at the following examples to understand the format
 
