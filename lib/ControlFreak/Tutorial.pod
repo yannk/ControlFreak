@@ -40,24 +40,14 @@ This is the logging backend of ControlFreak.
 
 =head2 Temporary instructions
 
-Simpler instructions will come later, when ControlFreak will be on CPAN.
+Other instructions will come later, when ControlFreak will be on CPAN.
 
-  # install dependencies listed above
+  # install cpanm (see App::cpanminus documentation for details)
+  cd ~/bin
+  wget http://xrl.us/cpanm
+  chmod +x cpan
 
-  cd /tmp
-  wget -O cfk.tar.gz http://github.com/yannk/ControlFreak/tarball/master
-  tar xcfz cfk.tar.gz
-  mv yannk* cfk
-  cd cfk
-
-  perl Makefile.PL
-  make
-  make test
-  # install any depencies revealed so far
-
-  make install
-
-  # the rest of this tutorial will assume we are in this directory.
+  cpanm http://github.com/yannk/ControlFreak/tarball/master
 
 =head1 BASICS
 
@@ -73,38 +63,32 @@ of the services it has the responsibities of, aren't lost.
 
 =head2 Start cfkd with a config file and use cfkctl
 
-  # create a very simple configuration
-  $ cat > config <<END
-  console address=unix/:/tmp/cfkd.sock
-  console full=on
-  service svc1 cmd=sleep 100
-  END
+    # run in the background:
+    $ cfkd -d
 
-This create a very simple configuration that is very basic. First it declares
-the management socket address. C<console full=on> gives all privileges on that
-admin connection (Read the L<SECURITY> section).
-
-Then it declares a first service named C<svc1> which just sleeps for 100 seconds.
-
-  # start ControlFreak
-  $ perl ./cfkd -c config -d
-  INFO - Admin interface started on unix/:/tmp/cfkd.sock
-
-C<-d> starts C<cfkd> in daemon mode, the C<-c> flags just specifies the config
-to use.
+    # alternatively, run cfkd in it's own shell/term in the foreground:
+    $ cfkd
 
 You can know use C<cfkctl> to inspect C<cfkd> status. This control script
 connects by default to a unix socket at C</tmp/cfkd.sock>.
 
-  $ perl ./cfkctl status
+  $ perl cfkctl status
+  # nothing! Expectingly there is no service declared in cfkd
+
+  # declare a new svc1 service with a 'sleep 100' as the command
+  $ cfkctl load - <<END
+  service svc1 cmd=sleep 100
+  END
+
+  $ perl cfkctk status
   stopped svc1
 
   # let's start the service we have
-  $ perl ./cfkctl start svc1
-  $ perl ./cfkctl status
+  $ cfkctl start svc1
+  $ cfkctl status
   running svc1                   2 seconds ago (Wed Nov 11 16:16:09 2009)
-  $ perl ./cfkctl stop svc1
-  $ perl ./cfkctl status
+  $ cfkctl stop svc1
+  $ cfkctl status
   stopped svc1                   3 seconds ago (Wed Nov 11 16:17:07 2009)
 
 =head2 How it works
@@ -151,10 +135,10 @@ management).
 
 =head2 When a service dies or exit abnormally
 
-  $ ./cfkctl up svc1 # make sure svc1 is up
+  $ cfkctl up svc1 # make sure svc1 is up
   # kill it!
-  $ kill -9 `perl ./cfkctl pid svc1`
-  $ perl cfkctl status
+  $ kill -9 `cfkctl pid svc1`
+  $ cfkctl status
   running svc1                   2 seconds ago (Wed Nov 11 16:45:43 2009
 
 As you can see the service is running for 2 seconds. It obviously has been
@@ -162,17 +146,35 @@ restarted.
 
 =head2 Logging
 
-Actually we could have a log of the previous kill event if we had declared
-some log mechanism. Let's fix that now.
+By default ControlFreak creates a $HOME/.controlfreak directory in which
+it logs the main events that happened:
 
-  $ cat > log.conf <<END
-  log4perl.rootLogger=DEBUG, LOGFILE
-  log4perl.appender.LOGFILE=Log::Log4perl::Appender::File
-  log4perl.appender.LOGFILE.filename=/tmp/cfkd.log
-  log4perl.appender.LOGFILE.mode=append
-  log4perl.appender.LOGFILE.layout=PatternLayout
-  log4perl.appender.LOGFILE.layout.ConversionPattern=%d %S %p - %m%n
-  END
+  $ tail ~/.controlfreak/cfkd.log
+  - INFO 947 ControlFreak.Logger - child svc1 exited
+  - INFO 75 ControlFreak.Logger - new connection to admin from unix/:/Users/yann/.controlfreak/sock
+  - INFO 846 ControlFreak.Logger - starting svc1
+  - INFO 114 ControlFreak.Logger - Console exiting
+  - INFO 75 ControlFreak.Logger - new connection to admin from unix/:/Users/yann/.controlfreak/sock
+  - INFO 114 ControlFreak.Logger - Console exiting
+  - ERROR 966 ControlFreak.Logger - child terminated abnormally 9: Received signal 9
+  - INFO 846 ControlFreak.Logger - starting svc1
+
+The fact that svc1 was abruptly killed was logged as well as the information
+that ControlFreak restarted it (behaviour you can alter via config, of course).
+
+  # default config file
+  $ cat ~/.controlfreak/log.config
+  log4perl.rootLogger=INFO, ALL
+  log4perl.appender.ALL=Log::Log4perl::Appender::File
+  log4perl.appender.ALL.filename=sub { $ENV{CFKD_HOME} . "/cfkd.log" }
+  log4perl.appender.ALL.mode=append
+  log4perl.appender.ALL.layout=PatternLayout
+  # %S = service pid
+  log4perl.appender.ALL.layout.ConversionPattern=%S %p %L %c - %m%n
+
+You can alter this configuration as much as you want and send USR1 signal
+to C<cfkd> to instruct it to reload this configuration and alter the logging
+behavior.
 
 The pattern layout configuration is better understood if you refer to this
 page: L<http://search.cpan.org/~mschilli/Log-Log4perl-1.25/lib/Log/Log4perl/Layout/PatternLayout.pm>
@@ -180,29 +182,8 @@ page: L<http://search.cpan.org/~mschilli/Log-Log4perl-1.25/lib/Log/Log4perl/Layo
 Note that C<%S> is a custom placeholder representing the pid of the service if
 it exists.
 
-  # declare this file in our previous configuration
-  $ echo "logger config = /tmp/cfk/log.conf" >> config
-
-  # now, reload the config
-  $ cfkctl reload # doesn't exist yet XXX
-
-  $ tail /tmp/cfkd.log
-  2009/11/11 17:01:58 - INFO ControlFreak.Logger - new connection to admin from 127.0.0.1:53737
-  2009/11/11 17:01:58 - INFO ControlFreak.Logger - Console exiting
-
-  $ perl ./cfkctl start svc1
-  $ tail -n 1 /tmp/cfkd.log
-  2009/11/11 17:04:27 - DEBUG ControlFreak.Logger - Now setting 'svc1' service as running
-
-  # redo another kill
-  $ kill -9 `perl ./cfkctl pid svc1`
-  $ tail -n 3 /tmp/cfkd.log
-  2009/11/11 17:06:04 - ERROR ControlFreak.Logger - child terminated abnormally 9: Received signal 9
-  2009/11/11 17:06:04 - INFO ControlFreak.Logger - starting svc1
-  2009/11/11 17:06:05 - DEBUG ControlFreak.Logger - Now setting 'svc1' service as running
-
 Logging is as flexible as Log4perl allows, which means it's very flexible.
-Also, you can log STDERR and STDOUT of each services independantly (see rest of
+Also, you can log STDERR and STDOUT of each services independently (see rest of
 documentation), so that you never miss something that allows you to better
 understand why something is not working the way it should.
 
@@ -231,7 +212,7 @@ using ControlFreak.
 process to share a bunch of code and data, which can save lots of memory).
 
 Because we don't want to load a tons of stuff in C<cfkd> process, and because
-we want to keep C<cfkd> very stable anyway, we use an intermediate process:
+we want to keep C<cfkd> very stable anyway, we use an intermediary process:
 a Proxy, whose job is to transparently manage a bunch of children services
 as if they were directly under C<cfkd> control.
 
@@ -239,9 +220,15 @@ as if they were directly under C<cfkd> control.
 
 =head1 SECURITY
 
-(Where I describe that having the management port open to the world is a bad
-thing - or even a suicidal behaviour if you combine it with
-"C<console full=on>"
+By default ControlFreak management port creates a unix domain socket,
+but you can open a TCP socket as well. In both cases, but especially
+in the later you have to be careful with the security implications:
+
+You don't want to allow anyone to create a C<svc 0wned cmd="rm -rf /">
+service...
+
+Similarly be careful not to expose the log configuration in a way that
+would allow untrusted users to alter it.
 
 =head1 TAGGING SERVICES
 
@@ -256,9 +243,6 @@ can refer to services using those tags.
 
 Here is a very simple example:
 
-  logger config = /tmp/cfk/log.conf
-  console address=127.0.0.1:11311
-  console full=on
   service web1 cmd=sleep 100
   service web1 tags=web,prod
 
@@ -269,8 +253,8 @@ Here is a very simple example:
   service web3 tags=web,stage
 
   # the leading '@' refers to services by tag
-  $ perl ./cfkctl start @web
-  $ perl ./cfkctl status @prod
+  $ cfkctl start @web
+  $ cfkctl status @prod
   running web1                   6 seconds ago (Wed Nov 11 17:30:17 2009)
 
 =head1 MEMORY OVERHEAD
