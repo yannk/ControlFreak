@@ -20,7 +20,7 @@ use Carp;
 use Pod::Usage;
 use POSIX 'SIGTERM';
 
-my %options = ( address => "unix:$ENV{HOME}/.controlfreak/sock" );
+my %options = ();
 
 GetOptions(
     "a|address=s"     => \$options{address},
@@ -39,9 +39,14 @@ pod2usage(-verbose => 2) if $options{man};
 
 my $ctrl;
 
-## make home
+## make home, and export it in ENV
 my $home = $options{home} || File::Spec->catdir($ENV{HOME}, '.controlfreak');
 mkdir $home unless -d $home;
+$ENV{CFKD_HOME} = $home;
+
+## specify a default address in the form of a unix socket in $home
+$options{address} = "unix:$home/sock"
+    unless $options{address};
 
 my $log_config_file = $options{log_config_file};
 if (! $log_config_file) {

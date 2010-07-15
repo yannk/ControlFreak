@@ -52,10 +52,14 @@ sub safe_reinit {
 }
 
 sub default_config {
-    return \<<EOFC
-log4perl.rootLogger=INFO, SCREEN
-log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
-log4perl.appender.SCREEN.layout=SimpleLayout
+    return \<<'EOFC';
+log4perl.rootLogger=INFO, ALL
+log4perl.appender.ALL=Log::Log4perl::Appender::File
+log4perl.appender.ALL.filename=sub { $ENV{CFKD_HOME} . "/cfkd.log" }
+log4perl.appender.ALL.mode=append
+log4perl.appender.ALL.layout=PatternLayout
+# %S = service pid
+log4perl.appender.ALL.layout.ConversionPattern=%S %p %L %c - %m%n
 EOFC
 }
 
