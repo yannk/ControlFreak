@@ -175,7 +175,6 @@ sub start_service {
     }
     unless ($proxy->is_running) {
         if ($proxy->auto) {
-            ## async XXX
             $proxy->run;
         }
         else {
