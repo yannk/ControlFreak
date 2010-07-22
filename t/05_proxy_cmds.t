@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => '.', '../lib';
-use Test::More tests => 30;
+use Test::More tests => 31;
 use ControlFreak;
 use AnyEvent;
 use AnyEvent::Handle;
@@ -54,7 +54,12 @@ sub process_ok {
         name => 'somesvc',
         cmd => 'sleep 99',
     );
-    my $proxy = ControlFreak::Proxy->new(ctrl => $ctrl2, name => 'a');
+    my $proxy = ControlFreak::Proxy->new(
+        ctrl => $ctrl2,
+        name => 'a',
+        auto => 0,
+    );
+    ok ! $proxy->auto, "no-auto proxy";
     is $proxy->{cmd}, undef, "no command to our proxy yet";
     $proxy->add_service($svc);
     is scalar $proxy->services, 1, "one service";

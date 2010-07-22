@@ -294,6 +294,7 @@ sub process_proxy {
     my $value = $assignment;
     if (defined $value) {
         $value =~ s/^\s+// ;
+        $value = _as_bool($value) if $attr =~ / ^noauto /x;
 
         ## DWIM with quotes
         if ($value =~ /^"(.*)"/ or $value =~ /^'(.*)'/) {

@@ -7,7 +7,7 @@ use Carp;
 use ControlFreak::Util;
 use Fcntl qw(F_GETFD F_SETFD FD_CLOEXEC);
 use JSON::XS;
-use Object::Tiny qw{ name cmd pid is_running env };
+use Object::Tiny qw{ name cmd pid is_running env auto };
 use Params::Util qw{ _ARRAY _STRING };
 use POSIX 'SIGTERM';
 use Scalar::Util();
@@ -88,6 +88,9 @@ sub new {
     $proxy->{ctrl} = $ctrl;
     $proxy->{servicemap} = {};
     $proxy->{env}  ||= {};
+    unless (defined $param{auto}) {
+        $proxy->{auto} = 1; # proxy is 'auto' by default
+    }
     unless ($ctrl->add_proxy($proxy)) {
         $ctrl->log->error("A proxy by that name already exists");
         return;
@@ -171,9 +174,15 @@ sub start_service {
         );
     }
     unless ($proxy->is_running) {
-        return $proxy->_err(
-            %param, "Proxy is not running, not starting service '$name'"
-        );
+        if ($proxy->auto) {
+            ## async XXX
+            $proxy->run;
+        }
+        else {
+            return $proxy->_err(
+                %param, "Proxy is not running, not starting service '$name'"
+            );
+        }
     }
     my $hdl = $proxy->{command_hdl};
     my $descr = {
@@ -288,6 +297,12 @@ sub set_desc {
     my $value = _STRING($_[1]) or return;
     $value =~ s/[\n\r\t\0]+//g; ## desc should be one line
     shift->_set('desc', $value);
+}
+
+sub set_noauto {
+    my $value = _STRING($_[1]);
+    return unless defined $value;
+    shift->_set('auto', !$value);
 }
 
 sub _set {
@@ -510,6 +525,12 @@ sub process_status {
     }
     elsif ($status && $status eq 'stopped') {
         $svc->acknowledge_exit($data->{exit_status});
+        if ($proxy->auto) {
+            my @up = grep { $_->is_up } $proxy->services;
+            unless (@up) {
+                $proxy->shutdown;
+            }
+        }
     }
     else {
         $ctrl->log->fatal( "Unknown status '$status' sent to proxy '$pname'");
