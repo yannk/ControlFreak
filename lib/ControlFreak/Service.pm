@@ -542,7 +542,7 @@ sub down {
 
 =head2 restart(%param)
 
-Restarts the service. i.e. stops it, then starts it.
+Restarts the service. i.e. stops it (if up), then starts it.
 
 =cut
 
@@ -552,7 +552,7 @@ sub restart {
     my $err = $param{err_cb} ||= sub {};
     my $ok  = $param{ok_cb}  ||= sub {};
     my $fail = 0;
-    $svc->stop(%param, ok_cb => sub { $fail = 0 }, err_cb => sub { $fail++ });
+    $svc->down(%param, ok_cb => $ok, err_cb => sub { $fail++ });
     return $err->() if $fail;
     my $stopwait_secs = $svc->stopwait_secs || DEFAULT_STARTWAIT_SECS;
     my $delay = $stopwait_secs / 10;
@@ -565,7 +565,7 @@ sub restart {
         }
         return unless $svc->is_stopped;
         $svc->{restart_cv} = undef;
-        return $svc->start(%param);
+        return $svc->up(%param);
     };
     return;
 }

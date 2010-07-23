@@ -74,7 +74,7 @@ cfkctl [options] command [svcref ...]
     up                  Make sure service(s) is(are) up
     down                Make sure service(s) is(are) down
     stop                Stop the service(s)s
-    restart             If service(s) is(are) up, restart
+    restart             Stop the service(s) (if up), and then start
     status              Print status(es) of service(s)
     pids                Print service pid(s)
     desc                Print a description of the service(s)
