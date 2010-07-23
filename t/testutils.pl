@@ -1,6 +1,16 @@
 use ControlFreak::Logger;
 use Time::HiRes qw/gettimeofday tv_interval/;
 
+{
+    no warnings 'redefine';
+    *ControlFreak::Logger::default_config = sub { \<<EOL
+    log4perl.rootLogger=INFO, SCREEN
+    log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
+    log4perl.appender.SCREEN.layout=SimpleLayout
+EOL
+    };
+}
+
 sub wait_for_starting { wait_for_status('is_starting', @_) }
 sub wait_for_running  { wait_for_status('is_running', @_) }
 sub wait_for_down     { wait_for_status('is_down', @_) }
