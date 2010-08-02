@@ -326,6 +326,7 @@ sub cmd_load {
         }
     }
     close $fh unless $file eq '-';
+    return '';
 }
 
 sub read_response {
