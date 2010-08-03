@@ -440,8 +440,9 @@ sub has_stopped {
 
 sub _check_stopping_state {
     my $svc = shift;
-    my $on_stop = shift;
+    my $on_stop = $svc->{on_stop_cb};
     $svc->{stop_cv} = undef;
+    $svc->{on_stop_cb} = undef;
     if ($svc->is_stopped) {
         $on_stop->($svc) if $on_stop;
         return;
@@ -938,8 +939,8 @@ sub acknowledge_exit {
     my $svc = shift;
     my $es = shift;
 
-    my $ctrl = $svc->{ctrl};
-    my $name = $svc->name;
+    my $ctrl    = $svc->{ctrl};
+    my $name    = $svc->name;
     my $on_stop = $svc->{on_stop_cb};
 
     ## reset timers, set basic new state
