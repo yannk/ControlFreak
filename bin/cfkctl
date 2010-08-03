@@ -78,7 +78,7 @@ cfkctl [options] command [svcref ...]
     status              Print status(es) of service(s)
     pids                Print service pid(s)
     desc                Print a description of the service(s)
-    destroy             Down a service and deletes it //not implemented yet
+    destroy             Down a service and deletes it
 
  Proxy commands:
     pup <proxy>         Up specified proxy
@@ -138,7 +138,7 @@ one one server.
     cfkctl pids
 
     ## remove a service reference completely
-    cfkctl destroy syncer # TODO
+    cfkctl destroy syncer
 
 =head1 ADDRESS FORMAT
 

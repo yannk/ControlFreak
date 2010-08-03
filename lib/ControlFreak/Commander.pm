@@ -279,6 +279,7 @@ sub cmd_down    { _cmd_svc( "down",    @_ ) }
 sub cmd_stop    { _cmd_svc( "stop",    @_ ) }
 sub cmd_start   { _cmd_svc( "start",   @_ ) }
 sub cmd_restart { _cmd_svc( "restart", @_ ) }
+sub cmd_destroy { _cmd_svc( "destroy", @_ ) }
 
 sub _cmd_svc {
     my $command   = shift;

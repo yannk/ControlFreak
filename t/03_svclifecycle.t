@@ -1,6 +1,6 @@
 use strict;
 use Find::Lib libs => ['../lib', '.'];
-use Test::More tests => 44;
+use Test::More tests => 51;
 require 'testutils.pl';
 use ControlFreak;
 use AnyEvent;
@@ -184,4 +184,27 @@ my $ctrl = ControlFreak->new();
         err_cb => sub { ok 0, "failed where it should have succeeded" },
     );
     ok wait_for_starting($i), "restarted" or diag $i->state;
+}
+
+## stop with a callback
+{
+    my $pi = $ctrl->find_or_create_svc('pi');
+    $pi->set_cmd(q|sleep 100|);
+    $pi->set_startwait_secs(0.10);
+    $pi->set_stopwait_secs(0.20);
+    $pi->start;
+    ok wait_for_running($pi), "now running";
+    ok $pi->is_running, "π is running";
+    my $run = 0;
+    $pi->stop(
+        on_stop => sub {
+            $run = 1;
+            ok $pi->is_stopped, "now stopped";
+        },
+    );
+    ok !$run, "not yet run";
+    ok $pi->is_stopping, "now is stopping";
+    ok wait_for_stopped($pi), "now stopped";
+    ok $run, "callback on_stop() has run";
+
 }

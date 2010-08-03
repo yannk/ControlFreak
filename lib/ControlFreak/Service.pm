@@ -310,6 +310,7 @@ sub stop {
     $svc->{state}      = 'stopping';
     $svc->{wants_down} = 1;
 
+    $svc->{on_stop_cb} = $param{on_stop};
     my $stopwait_secs = $svc->stopwait_secs;
     $svc->{stop_cv} =
         AE::timer $stopwait_secs, 0, sub { $svc->_check_stopping_state };
@@ -439,8 +440,12 @@ sub has_stopped {
 
 sub _check_stopping_state {
     my $svc = shift;
+    my $on_stop = shift;
     $svc->{stop_cv} = undef;
-    return if $svc->is_stopped;
+    if ($svc->is_stopped) {
+        $on_stop->($svc) if $on_stop;
+        return;
+    }
 
     my $wait = $svc->stopwait_secs;
     my $name = $svc->name;
@@ -935,8 +940,10 @@ sub acknowledge_exit {
 
     my $ctrl = $svc->{ctrl};
     my $name = $svc->name;
+    my $on_stop = $svc->{on_stop_cb};
 
     ## reset timers, set basic new state
+    $svc->{on_stop_cb}  = undef;
     $svc->{stop_cv}     = undef;
     $svc->{start_cv}    = undef;
     $svc->{child_cv}    = undef;
@@ -954,6 +961,7 @@ sub acknowledge_exit {
         return $svc->deal_with_failure;
     }
     $svc->{state} = 'stopped';
+    $on_stop->() if $on_stop;
     $svc->optionally_respawn;
 }
 

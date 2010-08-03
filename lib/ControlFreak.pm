@@ -48,7 +48,7 @@ ControlFreak - a process supervisor
     @svcs = $ctrl->service_by_tag($tag);
     @svcs = $ctrl->services;
 
-    $ctrl->destroy_service($svcname);
+    $ctrl->destroy($svcname);
 
     $ctrl->set_console($con);
     $con = $ctrl->console;
@@ -577,6 +577,51 @@ sub command_shutdown {
     my $ctrl = shift;
     $ctrl->shutdown;
     $ctrl->{exit_cv} = AE::timer 1, 0, sub { exit };
+}
+
+sub command_destroy {
+    my $ctrl = shift;
+    my %param = @_;
+
+    my $err = _CODE($param{err_cb}) || sub {};
+    my $ok  = _CODE($param{ok_cb})  || sub {};
+
+    my @svcs = $ctrl->services_from_args(
+        %param, err_cb => $err, ok_cb => $ok,
+    );
+    my %errors;
+    for my $svc (@svcs) {
+        my $svcname = $svc->name;
+        $svc->down(
+            on_stop => sub { $ctrl->destroy($svc) },
+            err_cb => sub {
+                $errors{$svcname}++;
+            },
+        );
+    }
+    if (keys %errors) {
+        my $list = join ", ", keys %errors;
+        $err->("Coudn't destroy: $list");
+    }
+    else {
+        return $ok->()
+    }
+    return;
+}
+
+=head2 destroy($svc)
+
+Removes any reference to $svc in the controller. The concerned
+service must be down in the first place.
+
+=cut
+
+sub destroy {
+    my $ctrl = shift;
+    my $svc  = shift;
+    my $svcname = $svc->name;
+    return unless $svc->is_down;
+    return delete $ctrl->{servicemap}{$svcname};
 }
 
 =head2 shutdown
