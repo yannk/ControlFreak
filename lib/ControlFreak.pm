@@ -621,6 +621,7 @@ sub destroy {
     my $svc  = shift;
     my $svcname = $svc->name;
     return unless $svc->is_down;
+    $ctrl->log->info("Destroying service '$svcname'");
     return delete $ctrl->{servicemap}{$svcname};
 }
 
