@@ -544,7 +544,7 @@ sub down {
     my $svc = shift;
     my %param = @_;
     if ($svc->is_down) {
-        $param{on_stop}->() if $param{on_stop};
+        $param{on_stop_cb}->() if $param{on_stop_cb};
         return;
     }
     return $svc->stop(%param);
