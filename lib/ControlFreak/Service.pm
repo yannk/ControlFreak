@@ -542,8 +542,9 @@ XXX down the service (do nothing if already down)
 
 sub down {
     my $svc = shift;
+    my %param = @_;
     if ($svc->is_down) {
-        $svc->{on_stop_cb}->() if $svc->{on_stop_cb};
+        $param{on_stop}->() if $param{on_stop};
         return;
     }
     return $svc->stop(@_);
