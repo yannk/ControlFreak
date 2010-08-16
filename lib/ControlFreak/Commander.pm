@@ -134,7 +134,7 @@ sub cmd_proxy_status {
             }
             $string_status = color($color) . $status . color('reset');
         }
-        return "%-6s %-20s %6s\n", $string_status, $st{name}, ($st{pid} || "");
+        return "%-6s %-20s %6s", $string_status, $st{name}, ($st{pid} || "");
     }
 }
 
@@ -248,7 +248,7 @@ sub cmd_pid {
     my %st;
     $commander->send_status_req("service $svc", \%st);
     my $pid = $st{$svc}{pid};
-    return "$pid\n" if $pid;
+    return $pid if $pid;
     return;
 }
 
