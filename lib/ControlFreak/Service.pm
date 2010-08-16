@@ -573,7 +573,7 @@ sub restart {
             $err->();
             return;
         }
-        return unless $svc->is_stopped;
+        return if $svc->is_up;
         $svc->{restart_cv} = undef;
         return $svc->up(%param);
     };
