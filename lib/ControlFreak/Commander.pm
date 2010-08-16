@@ -229,6 +229,7 @@ sub cmd_desc {
             };
         }
     }
+    my @outer_out;
     for (keys %desc) {
         my %d   = %{$desc{$_}};
         my @out = ("$_:");
@@ -236,9 +237,9 @@ sub cmd_desc {
         push @out, "desc=\"$d{desc}\""   if $d{desc};
         push @out, "proxy=\"$d{proxy}\"" if $d{proxy};
         push @out, "cmd=\"$d{cmd}\""     if $d{cmd};
-        return join " ", @out, "\n";
+        push @outer_out, join " ", @out;
     }
-    return;
+    return join "\n", @outer_out;
 }
 
 sub cmd_pid {
