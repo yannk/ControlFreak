@@ -20,7 +20,7 @@ use Params::Util qw{ _ARRAY _CODE };
 
 our $CRLF = "\015\012";
 
-=encoding utf-8
+=encoding utf8
 
 =head1 NAME
 
