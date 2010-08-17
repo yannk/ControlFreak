@@ -38,7 +38,7 @@ This is the logging backend of ControlFreak.
 
 =back
 
-=head2 Temporary instructions
+=head2 cpanm
 
 Other instructions will come later, when ControlFreak will be on CPAN.
 
@@ -47,12 +47,16 @@ Other instructions will come later, when ControlFreak will be on CPAN.
   wget http://xrl.us/cpanm
   chmod +x cpan
 
+  ## install cpan version
+  cpanm ControlFreak
+
+  ## install bleeding edge
   cpanm http://github.com/yannk/ControlFreak/tarball/master
 
 =head1 BASICS
 
 When ControlFreak daemon C<cfkd> is started, it opens a management socket
-that allows operators and programs to hand instructions to the daemon.
+that allows operators and programs to sennd instructions to the daemon.
 
 The daemon duty is to fork and exec services, making sure that they are
 running or stopped according to commands received. C<cfkd> is also
@@ -98,9 +102,11 @@ the internals
 
   $ socat readline unix:/tmp/cfkd.sock
 
+(Note that you can configure a tcp port instead so that you can telnet into it)
+
 Now type "C<command status>", the server will respond with OK or ERROR (in
-the rest of this extract the line after is a line we type in the telnet
-session).
+the rest of this extract the line after OK or ERROR is a line we type in
+the telnet/socat session).
 
   command status
   svc1    stopped                 1257985027
@@ -204,19 +210,20 @@ node per server. (10.0.0.100:8080, 10.0.0.101:8080, ...) which hides
 a number or actual workers. Of course you manage the number of active workers
 using ControlFreak.
 
-(Here goes the example)
+(TODO: example)
 
 =head1 SHARING MEMORY - Benefit from Unix Copy-On-Write Effect
 
-(Experimental feature - The goal is to fork workers from a same
-process to share a bunch of code and data, which can save lots of memory).
+B<ControlFreak> ships with a Perl proxy only. If you want to share memory
+for ruby/python you have to implement a proxy in this language (which
+is not very complicated).
 
 Because we don't want to load a tons of stuff in C<cfkd> process, and because
 we want to keep C<cfkd> very stable anyway, we use an intermediary process:
 a Proxy, whose job is to transparently manage a bunch of children services
 as if they were directly under C<cfkd> control.
 
-(Here goes the example)
+(TODO: example)
 
 =head1 SECURITY
 
@@ -256,14 +263,4 @@ Here is a very simple example:
   $ cfkctl start @web
   $ cfkctl status @prod
   running web1                   6 seconds ago (Wed Nov 11 17:30:17 2009)
-
-=head1 MEMORY OVERHEAD
-
-(not really its place?)
-
-The memory overhead is minimal considering it uses perl. On my 64bits linux,
-here is the weight of C<cfkd>.
-
-  yann@dev1:~/ControlFreak$ ps -p 1410 -o size=
-  15140
 

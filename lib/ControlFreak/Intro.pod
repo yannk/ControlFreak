@@ -15,7 +15,7 @@ Instances of this main L<ControlFreak> class are called controller, C<ctrl>.
 The supervisor/controller process is running in an EventLoop and forks
 to start (exec) the services it controls.
 
-Advanced ControlFreak features include:
+Advanced B<ControlFreak> features include:
 
 =over 4
 
@@ -59,12 +59,11 @@ Pid management is always a nightmare when you want to cover all these needs.
 =head1 WHY?
 
 There are many similar programs freely available, but as stated above,
-ControlFreak does a few things differently (and hopefully better), also having
-ControlFreak written in Perl can be an important acceptance factor for some
-software shops :)
+ControlFreak does a few things differently (and hopefully better). ControlFreak
+is written in Perl which makes it crash resistant and easy to debug/inspect.
 
 C<ControlFreak> is also designed to be as simple as permitted. In order to keep
-the Core C<ControlFreak> stable, easy to understand and easy to run, there
+the core C<ControlFreak> stable, easy to understand and easy to run, there
 should be little added to the core features of running services and providing
 means to control them. For instance, C<ControlFreak> doesn't have on the
 roadmap to develop features to auto-restart process if they use too much
@@ -97,6 +96,17 @@ From the above, it results, that B<ControlFreak> is no:
 
 =back
 
-=cut
+=head1 MEMORY OVERHEAD
 
+The memory overhead is minimal considering it uses perl. On my 64bits linux,
+here is the weight of C<cfkd>.
+
+  yann@xen:~/git/ControlFreak$ ps -p 27554 -o size=
+  12948
+
+  yann@laptop:~$ ps -p 16452 -o rss
+  RSS
+  5896
+
+=cut
 

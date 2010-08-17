@@ -115,8 +115,8 @@ Please see L<SYNOPSIS>.
 B<cfkctl> is B<ControlFreak> command line interface, it connects to
 the management port and issues commands to it.
 
-This script is intended to manage one instance of B<ControlFreak> running
-one one server.
+This script is intended to manage the communication with a B<cfkd>
+instance running on a local or remote host.
 
 =head1 EXAMPLES
 

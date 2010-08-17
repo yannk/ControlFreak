@@ -493,14 +493,6 @@ sub command_version {
     $ok->($VERSION);
 }
 
-#sub command_warn {
-#    warn "I told you!";
-#}
-
-#sub command_die {
-#    die "really? :(";
-#}
-
 sub command_status {
     my $ctrl = shift;
     my %param = @_;

@@ -27,7 +27,6 @@ GetOptions(
     "d|daemon"        => \$options{daemon},
     "t|trap"          => \$options{trap},
     "home=s"          => \$options{home},
-    "full-console"    => \$options{full_console},
     "log-config-file" => \$options{log_config_file},
 
     'h|help'          => \$options{help},
@@ -183,8 +182,6 @@ Options:
  -d, --daemon        Run as a daemon
  -t, --trap          Trap and ignore normal signals (ignored unless -d)
 
- --full-console      If set, then the console is completely unrest
-
  -h, --help          Help
  -m, --man           More help
 
@@ -227,8 +224,8 @@ services.
 
 =head1 SAMPLE LOG CONFIG
 
-B<ControlFreak> currently works with L<Log::Log4perl> framework which is
-is incredibly flexible. You might have to install additional modules to get the
+B<ControlFreak> works with L<Log::Log4perl> framework which is incredibly
+flexible. You might have to install additional modules to get the
 most of your logging experience (let's say if you want to be notified by
 Instant Message of services going down).
 
@@ -239,7 +236,7 @@ There are two categories of logger:
 =item the main logger
 
 This is the logger used by B<ControlFreak> itself, it allows to finely control
-what do you want to log from what's happening in the daemon.
+what do you want to log from what's happening in C<cfkd>.
 
 =item the service logger
 
@@ -257,17 +254,25 @@ and $type is either C<err> or C<out>.
 Obviously messages going to C<stderr> will be logged at level C<ERROR> while
 messages on C<stdout> will be logged at C<INFO> level.
 
-So there is a bit of redundancy in there but, this is what gets you the most
-flexibility with log4perl.
-
 =back
 
 =head2 Service cspec/placeholder
 
 B<ControlFreak> defines a special cspec C<%S> representing the service
-pid. (only makes sense in the service logger).
+pid. (which only makes sense in the service logger).
 
-=head2 sample 1
+=head2 Log Config Sample 2
+
+    ## logs everything under cfk's home
+    log4perl.rootLogger=DEBUG, LOGFILE
+
+    log4perl.appender.LOGFILE=Log::Log4perl::Appender::File
+    log4perl.appender.LOGFILE.filename=/home/user/.controlfreak/cfkd.log
+    log4perl.appender.LOGFILE.mode=append
+    log4perl.appender.LOGFILE.layout=PatternLayout
+    log4perl.appender.LOGFILE.layout.ConversionPattern=%d [%S] %p %c - %m%n
+
+=head2 Log Config Sample 2
 
     # daemon log to the main log
     log4perl.rootLogger=DEBUG, LOGFILE
@@ -295,8 +300,5 @@ pid. (only makes sense in the service logger).
     log4perl.appender.SVCFILE.mode=append
     log4perl.appender.SVCFILE.layout=PatternLayout
     log4perl.appender.SVCFILE.layout.ConversionPattern=%S %p %L %c - %m%n
-
-=head2 sample 2
-
 
 =cut

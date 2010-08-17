@@ -17,7 +17,7 @@ use Try::Tiny;
 
 =head1 NAME
 
-ControlFreak::Proxy - Delegate some control to a secondary process.
+ControlFreak::Proxy - Delegate some control to an intermediary process.
 
 =head1 DESCRIPTION
 
@@ -29,7 +29,7 @@ don't want to clutter it with features that are only rarely used or that
 could make the controller unstable.
 
 One example of that is Memory Sharing. If you have 20 application processes
-running on one machine all having the same code running, then there is a
+running on one machine all having the same code running, there is a
 memory benefit into making sure the app is loaded in the parent process
 of all these applications. Indeed, it would allow all children to initially
 share parent code and thus potentially reduce the memory footprint of the
@@ -562,7 +562,8 @@ sub process_log {
 
 =head2 has_stopped
 
-TBD
+Called when the proxy has exited. It performs a number
+of cleaning tasks.
 
 =cut
 
