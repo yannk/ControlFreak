@@ -11,7 +11,7 @@ requires 'Object::Tiny';
 requires 'Params::Util';
 requires 'Log::Log4perl';
 requires 'EV';
-requires 'AnyEvent';
+requires 'AnyEvent' => '5.202';
 requires 'JSON::XS';
 
 build_requires 'Test::More';
