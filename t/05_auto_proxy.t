@@ -49,6 +49,7 @@ sub process_ok {
         ctrl => $ctrl,
         name => 'somesvc',
         cmd  => $cmd,
+        startwait_secs => .25,
     );
 
     my $proxy = ControlFreak::Proxy->new(

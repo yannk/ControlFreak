@@ -345,7 +345,11 @@ sub shutdown {
 sub child_exit {
     my $proxy = shift;
     my ($pid, $status) = @_;
-    my ($svc) = grep { $_->{pid} == $pid } values %{ $proxy->{services} };
+
+    my ($svc) = grep { $_->{pid} == $pid }
+                grep { $_->{pid} }
+                values %{ $proxy->{services} };
+
     unless ($svc) {
         $proxy->log(err => "Blacklisting yet unknown pid $pid");
         $proxy->blacklist_pid($pid, $status);

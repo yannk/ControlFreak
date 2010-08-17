@@ -521,6 +521,7 @@ sub process_status {
             $ctrl->log->fatal("Started '$name' without pid!");
         }
         $svc->assign_pid( $pid );
+        $svc->set_check_running_state_timer;
     }
     elsif ($status && $status eq 'stopped') {
         $svc->acknowledge_exit($data->{exit_status});
