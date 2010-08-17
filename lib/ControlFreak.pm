@@ -2,7 +2,7 @@ package ControlFreak;
 
 use strict;
 use 5.008_001;
-our $VERSION = '0.01';
+our $VERSION = '1.0.0'; ## http://semver.org
 
 use Object::Tiny qw{
     log
