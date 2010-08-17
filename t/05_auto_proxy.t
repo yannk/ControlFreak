@@ -71,7 +71,7 @@ sub process_ok {
     ok $proxy->is_running, "proxy automatically started";
     wait_for (sub { $svc->is_running });
     $svc->stop;
-    wait_for (sub { !$proxy->is_running });
+    wait_for (sub { !$proxy->is_running }, 4);
     ok !$proxy->is_running, "proxy automatically stopped";
 
     ## Service is dying, proxy should restart each time too. getting a new PID
