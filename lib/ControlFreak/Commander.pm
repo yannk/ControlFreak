@@ -107,9 +107,9 @@ sub cmd_status {
     return join "\n", @out;
 }
 
-sub cmd_proxy_status {
+sub cmd_proxystatus {
     my $commander = shift;
-    $commander->send_request("command proxy_status");
+    $commander->send_request("command proxystatus");
 
     my $do_color  = $can_color && $has_ansi;
 
@@ -118,6 +118,7 @@ sub cmd_proxy_status {
         warn "error: $error";
         next;
     }
+    my @out;
     for (reverse @$response) {
         my %st;
         @st{ qw/name status pid/ } = split /\t/, $_;
@@ -134,8 +135,11 @@ sub cmd_proxy_status {
             }
             $string_status = color($color) . $status . color('reset');
         }
-        return "%-6s %-20s %6s", $string_status, $st{name}, ($st{pid} || "");
+        push @out, sprintf "%-6s %-20s %6s", $string_status,
+                                             $st{name},
+                                             ($st{pid} || "");
     }
+    return join "\n", @out;
 }
 
 sub parse_statuses {
@@ -282,6 +286,9 @@ sub cmd_start   { _cmd_svc( "start",   @_ ) }
 sub cmd_restart { _cmd_svc( "restart", @_ ) }
 sub cmd_destroy { _cmd_svc( "destroy", @_ ) }
 
+sub cmd_proxyup   { _cmd_proxy( "up",   @_ ) }
+sub cmd_proxydown { _cmd_proxy( "down", @_ ) }
+
 sub _cmd_svc {
     my $command   = shift;
     my $commander = shift;
@@ -294,6 +301,18 @@ sub _cmd_svc {
         if ($error) {
             croak "error: $error";
         }
+    }
+}
+
+sub _cmd_proxy {
+    my $command   = shift;
+    my $commander = shift;
+    my ($proxy)   = @_;
+
+    $commander->send_request("command proxy$command $proxy");
+    my ($error) = $commander->read_response;
+    if ($error) {
+        croak "error: $error";
     }
 }
 

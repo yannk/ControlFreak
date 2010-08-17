@@ -426,7 +426,7 @@ sub _command_ctrl {
 
 ## for now, at least this is separated.
 ## but could we imagine a command start all running proxies as well?
-sub command_pup {
+sub command_proxyup {
     my $ctrl = shift;
     my %param = @_;
 
@@ -444,7 +444,7 @@ sub command_pup {
     return;
 }
 
-sub command_pdown {
+sub command_proxydown {
     my $ctrl = shift;
     my %param = @_;
 
@@ -542,15 +542,15 @@ sub command_pids {
     $ok->(join "\n", @out);
 }
 
-sub command_proxy_status {
+sub command_proxystatus {
     my $ctrl = shift;
     my %param = @_;
 
     my $ok      = _CODE($param{ok_cb}) || sub {};
     my @proxies = $ctrl->proxies;
     my @out;
-    for (@proxies) {
-        push @out, $_->status_as_text;
+    for my $p ($ctrl->proxies) {
+        push @out, $p->status_as_text;
     }
     $ok->(join "\n", @out);
 }

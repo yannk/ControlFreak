@@ -81,8 +81,9 @@ cfkctl [options] command [svcref ...]
     destroy             Down a service and deletes it
 
  Proxy commands:
-    pup <proxy>         Up specified proxy
-    pdown <proxy>       Down specified proxy; down any attached service
+    proxystatus         Print status(es) of proxy(ies)
+    proxyup <proxy>     Up specified proxy
+    proxydown <proxy>   Down specified proxy; down any attached service
 
  Other commands
     pid <service>       Print the pid of the specified service
