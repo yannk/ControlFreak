@@ -1,8 +1,6 @@
-=pod
-
 =head1 NAME
 
-ControlFreak Tutorial
+ControlFreak::Tutorial - Discover what ControlFreak is about
 
 =head1 INSTALLATION
 

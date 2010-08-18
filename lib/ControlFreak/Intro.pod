@@ -1,8 +1,6 @@
-=pod
-
 =head1 NAME
 
-ControlFreak Introduction
+ControlFreak::Intro - ControlFreak Introduction
 
 =head1 DESCRIPTION
 

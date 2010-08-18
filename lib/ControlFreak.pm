@@ -20,8 +20,6 @@ use Params::Util qw{ _ARRAY _CODE };
 
 our $CRLF = "\015\012";
 
-=encoding utf8
-
 =head1 NAME
 
 ControlFreak - a process supervisor
@@ -653,5 +651,7 @@ in Python. Surprisingly I didn't find any similar program in Perl. Some
 ideas in ControlFreak are subtely different though.
 
 EDIT: I've spotted Ubic recently on CPAN
+
+=encoding utf8
 
 "If you have kids you probably know what I mean";
