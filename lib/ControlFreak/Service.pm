@@ -418,7 +418,6 @@ sub start {
 sub set_check_running_state_timer {
     my $svc = shift;
     my $startwait_secs = $svc->startwait_secs;
-    $svc->{ctrl}->log->debug("setting timer for $startwait_secs");
     $svc->{start_cv} =
         AE::timer $startwait_secs, 0, sub { $svc->_check_running_state };
     return;
@@ -494,7 +493,6 @@ sub kill {
 sub _check_running_state {
     my $svc = shift;
     $svc->{start_cv} = undef;
-    $svc->{ctrl}->log->debug("state is " . $svc->state);
     return unless $svc->is_starting;
     if (! $svc->pid) {
         if (my $proxy = $svc->{proxy}) {
