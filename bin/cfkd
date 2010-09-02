@@ -205,7 +205,8 @@ services.
   service perlbal cmd = /usr/bin/perlbal -c /etc/perlbal.conf
   service perlbal tags = prod
 
-  socket fcgisock address = 127.0.0.1:8080
+  socket fcgisock host = 127.0.0.1
+  socket fcgisock service = 8080
   socket fcgisock listen_qsize = 1024
 
   ## webNNN share a common socket through their stdin
