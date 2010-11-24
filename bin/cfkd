@@ -209,13 +209,13 @@ services.
   socket fcgisock service = 8080
   socket fcgisock listen_qsize = 1024
 
-  ## webNNN share a common socket through their stdin
+  ## webNNN share a common socket
   service web001 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
-  service web001 tie_stdin_to = fcgisock
+  service web001 add socket fcgisock
   service web001 tags = prod,webs
 
   service web002 cmd = /usr/bin/plackup -a /home/www/app.psgi -s FCGI
-  service web002 tie_stdin_to = fcgisock
+  service web001 add socket fcgisock
   service web002 tags = prod,webs
 
   # start random stuff

@@ -100,6 +100,18 @@ sub process_service {
     return $err->("empty service command") unless $cmd;
 
     my ($svcname, $attr, $assignment);
+    if ($cmd =~ /^([\w-]+)\s+add socket([\w-]+)/) {
+            $svcname = $1;
+        my $sockname = $2;
+        my $svc = $ctrl->find_or_create_svc($svcname)
+            or return $err->("service name is invalid");
+        my $socket = $ctrl->socket($sockname)
+            or return $err->("socket $sockname is invalid");
+        ## TODO use add_socket()
+        $svc->sockets->{$sockname} = $socket;
+        return $ok->($svc);
+    }
+
     if ($cmd =~ /^([\w-]+)\s+([\w-]+)\s*=(.*)$/) {
         $svcname     = $1;
         $attr        = $2;

@@ -22,6 +22,7 @@ use Object::Tiny qw{
     name
     desc
     proxy
+    sockets
 
     state
     pid
@@ -66,7 +67,6 @@ ControlFreak::Service - Object representation of a service.
     my $web = ControlFreak::Service->new(
         name => "fcgi",
         desc => "I talk http",
-        tie_stdin_to => $fcgisock,
         cmd => "/usr/bin/plackup -a MyApp -s FCGI",
     );
     $web->up;
@@ -123,8 +123,9 @@ sub new {
     $svc->{ctrl} = $param{ctrl}
         or croak "Service requires a controller";
 
-    $svc->{tags} ||= {};
-    $svc->{env}  ||= {};
+    $svc->{tags}    ||= {};
+    $svc->{env}     ||= {};
+    $svc->{sockets} ||= {};
 
     return $svc;
 }
@@ -818,6 +819,7 @@ sub set_startwait_secs {
 
 sub set_tie_stdin_to {
     my $value = _STRING($_[1]) or return;
+    warn "tie_stdin_to is deprecated, use 'add socket' instead";
     shift->_set('tie_stdin_to', $value);
 }
 
@@ -868,6 +870,7 @@ sub _run_cmd {
         ">"  => "/dev/null",
         "2>" => "/dev/null",
     );
+
     if (my $sockname = $svc->tie_stdin_to) {
         my $socket = $ctrl->socket($sockname);
         if ($socket) {
@@ -900,9 +903,10 @@ sub _run_cmd {
             $stds{"2>"} = $logger->svc_watcher(err => $svc);
         }
     }
+    my $cmd = $svc->interpreted_cmd;
     $svc->{child_cv} = AnyEvent::Util::run_cmd(
-        $svc->cmd,
-        close_all => 1,
+        $cmd,
+        close_all => 0,
         on_prepare => sub {
             $svc->prepare_child;
         },
@@ -916,6 +920,32 @@ sub _run_cmd {
     return 1;
 }
 
+=head2 interpreted_cmd
+
+The command to execute the service, but with substition of socket
+fds in the command line.
+
+e.g:
+
+  openssl --keyout=/dev/fd/$fd_whatever
+
+will be transformed to:
+
+  openssl --keyout=/dev/fd/5
+
+assuming that the socket named 'whatever' has file descriptor 5.
+
+=cut
+
+sub interpreted_cmd {
+    my $svc = shift;
+    my $cmd = $svc->cmd;
+    my $s   = $svc->sockets;
+    my %filenos = map { $_ => fileno $s->{$_} } keys %$s;
+    $cmd =~ s!\$fd_([\w-]+)!$filenos{$1} || "INVALID"!ge;
+    return $cmd;
+}
+
 sub prepare_child {
     my $svc = shift;
     unless ($svc->no_new_session) {
@@ -923,8 +953,27 @@ sub prepare_child {
         $svc->{ctrl}->log->error("cannot create new session for service")
             unless $sessid;
     }
+    $svc->setup_sockets_for_exec;
     $svc->setup_environment;
     return;
+}
+
+=head2 setup_environment
+
+Executed in the child before exec, to take service's attached sockets
+and pass them down to the new program as opened FDs.
+
+=cut
+
+sub setup_sockets_for_exec {
+    my $svc = shift;
+    my $sockets = $svc->sockets;
+    my @fds;
+    for (keys %$sockets) {
+        my $fileno = fileno $sockets->{$_};
+        push @fds, $fileno if $fileno;
+    }
+    AnyEvent::Util::close_all_fds_except(0, 1, 2, @fds)
 }
 
 =head2 setup_environment
@@ -944,6 +993,10 @@ sub setup_environment {
     }
     $ENV{CONTROL_FREAK_ENABLED} = 1;
     $ENV{CONTROL_FREAK_SERVICE} = $svc->name;
+    my $sockets = $svc->sockets;
+    for (keys %$sockets) {
+        $ENV{"CONTROL_FREAK_SOCKFD_$_"} = fileno $sockets->{$_};
+    }
     return 1;
 }
 
