@@ -186,7 +186,7 @@ sub start_service {
     my $hdl = $proxy->{command_hdl};
     my $descr = {
         command        => 'start',
-        cmd            => $svc->cmd,
+        cmd            => $svc->interpreted_cmd,
         name           => $svc->name,
         ignore_stderr  => $svc->ignore_stderr,
         ignore_stdout  => $svc->ignore_stdout,
