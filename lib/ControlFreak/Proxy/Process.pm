@@ -177,9 +177,23 @@ sub prepare_child {
             or print STDERR "cannot create a new session for proxied svc\n";
     }
 
-    $svc->setup_environment;
+    $proxy->setup_environment($svc);
 
     return;
+}
+
+sub setup_environment {
+    my $proxy = shift;
+    my $svc = shift;
+    my $env = $svc->{env};
+    return unless $env;
+    return unless ref $env eq 'HASH';
+    while (my ($k, $v) = each %$env) {
+        $ENV{$k} = $v;
+    }
+    $ENV{CONTROL_FREAK_ENABLED} = 1;
+    $ENV{CONTROL_FREAK_SERVICE} = $svc->{name};
+    return 1;
 }
 
 sub fork_do_cmd {
