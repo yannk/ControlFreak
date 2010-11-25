@@ -329,7 +329,7 @@ sub sockets_from_env {
 
     my $sockets = {};
     for (keys %ENV) {
-        next unless /^_CFK_SOCK_(.+)$/;
+        next unless /^CONTROL_FREAK_SOCKFD_(.+)$/;
         $sockets->{$1} = $ENV{$_};
     }
     return $sockets;

@@ -351,7 +351,7 @@ sub write_sockets_to_env {
         my $fh = $socket->fh or next;
 
         $proxy->no_close_on_exec($fh);
-        my $prefix = "_CFK_SOCK_";
+        my $prefix = "CONTROL_FREAK_SOCKFD_";
         my $name = $prefix . $socket->name;
         $ENV{$name} = fileno $fh;
     }
