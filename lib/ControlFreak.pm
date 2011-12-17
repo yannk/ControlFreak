@@ -342,7 +342,7 @@ sub services_by_tag {
 =head2 services_from_args(%param)
 
 Given a list of arguments (typically from the console commands)
-returns a list of L<ControlFreak::Service> instances. 
+returns a list of L<ControlFreak::Service> instances.
 
 =over 4
 
