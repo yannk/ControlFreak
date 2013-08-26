@@ -14,6 +14,7 @@ BEGIN {
 use Getopt::Long;
 use AnyEvent();
 use AnyEvent::Socket();
+use PID::File;
 
 use ControlFreak;
 use Carp;
@@ -60,7 +61,31 @@ if (! $log_config_file) {
     }
 }
 
+my $lockfilename = File::Spec->catfile($home, "lock");
+my $pid_file = PID::File->new(file => $lockfilename);
+if ($pid_file->running) {
+    my $pid = $pid_file->pid;
+    croak("Lock file: $lockfilename is in the way. cfkd running as pid:$pid?");
+}
 daemonize() if $options{daemon};
+
+my $tried = 0;
+while (1) {
+    if ($pid_file->create) {
+        last;
+    }
+    else {
+        if ($tried++ > 0) {
+            croak("Lock file $lockfilename is in the way.")
+        }
+        unlink $lockfilename;
+    }
+}
+
+my $guard = $pid_file->guard();
+END {
+    $pid_file->remove if $pid_file;
+}
 
 my $unix = ControlFreak::Util::parse_unix($options{address});
 
@@ -97,6 +122,7 @@ $ctrl->console->start;
 
 ## probably need to deal with signals
 AnyEvent->condvar->recv;
+$pid_file->remove if $pid_file;
 
 sub daemonize {
     my $pid;
@@ -153,6 +179,28 @@ sub trap_sigs {
     $SIG{__WARN__} = sub {
         my $warn = shift;
         $ctrl->log->warn($warn);
+    }
+}
+
+sub cfkd_lock {
+    my ($file) = shift;
+    my $pid_file = PID::File->new(file => $file);
+    if ($pid_file->running) {
+        my $pid = $pid_file->pid;
+        croak("Lock file: $file is in the way. cfkd running as pid:$pid?");
+    }
+
+    my $tried = 0;
+    while (1) {
+        if ($pid_file->create) {
+            return $pid_file;
+        }
+        else {
+            if ($tried++ > 0) {
+                croak("Lock file $file is in the way.")
+            }
+            unlink $file;
+        }
     }
 }
 

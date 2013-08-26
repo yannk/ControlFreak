@@ -5,6 +5,7 @@ all_from 'lib/ControlFreak.pm';
 include 'Module:AutoInstall';
 
 requires 'Find::Lib';
+requires 'PID::File';
 requires 'Pod::Usage';
 requires 'Try::Tiny';
 requires 'Object::Tiny';
